@@ -61,8 +61,6 @@
           <el-descriptions-item label="国势">{{dynasty_st}}</el-descriptions-item>
           <el-descriptions-item label="寿限">{{emperor_hp}}</el-descriptions-item>
         </el-descriptions>
-        <!-- <p>运行状况</p><el-progress type="circle" :percentage="dynasty_hp"></el-progress>
-        <p>身体状况</p><el-progress type="circle" :percentage="emperor_hp"></el-progress> -->
           <el-divider content-position="center">设置策略</el-divider>
           <div class="block">
             <span class="demonstration">勤政爱民</span>
