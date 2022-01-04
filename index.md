@@ -1,6 +1,6 @@
 dynasty——王朝，一个由 Vue+element 搭建的前端小游戏。
 
-[开始游戏](https://www.lylelove.top/Dynasty/dist/index.html)
+[开始游戏](https://www.lylelove.top/Dynasty/game/index.html)
 
 ---
 
