@@ -1,7 +1,7 @@
 <template>
   <div id="app">
-    <el-tag type="success">王朝V0.16</el-tag>
-    <el-dialog title="登基" :visible.sync="emperor_die" :class="emperor_die == true ? '' : 'none'">
+    <el-tag type="success">王朝V0.17</el-tag>
+    <el-dialog title="新皇登基" :visible.sync="emperor_die" :class="emperor_die == true ? '' : 'none'">
       <el-form >
       <el-form-item label="姓名" ><el-button style="margin:10px" type="primary" icon="el-icon-refresh" @click="emperor_change_name_after" circle></el-button>
         <el-input  v-model="emperor" autocomplete="off"></el-input>
@@ -61,6 +61,7 @@
           <el-descriptions-item label="国势">{{dynasty_st}}</el-descriptions-item>
           <el-descriptions-item label="寿限">{{emperor_hp}}</el-descriptions-item>
         </el-descriptions>
+        <Event ref="event" class="none"/>
           <el-divider content-position="center">设置策略</el-divider>
           <div class="block">
             <span class="demonstration">勤政爱民</span>
@@ -107,13 +108,16 @@
   </div>
 </template>
 <script>
+import Event from './components/Event.vue';
 export default {
+  components: { Event },
   name: 'App',
   data(){
     return{
       charts: '',
       opinionData: [],
       yearlist:[],
+      call_event:false,
       ongame:true,
       emperor_die:false,
       dynasty_die:false,
@@ -146,6 +150,9 @@ export default {
       shihao_list_first:"神圣贤文武成康献懿元章世",
       shihao_list_common:"景宣明昭正敬恭庄肃穆翼襄烈桓威勇毅克庄御安定简贞匡质靖真顺思皓显和元高光英睿博宪坚孝忠惠德仁智慎礼义周敏信达理清直钦益良度基慈齐深温让密厚纯勤谦友祁广淑俭灵荣厉絜舒贲逸偲逑懋宜哲察通仪经庇协端休悦绰容确恒熙洽绍",
       shihao:"",
+      event_id:0,
+      time_year:"",
+      event_happened:[{time:"",event:""}],
     };
   },
   methods:{
@@ -158,8 +165,8 @@ export default {
     gamestart(){
       this.emperor_firstname=this.emperor[0];
       this.firstgame=!this.firstgame;
-      this.emperor_age=16;
-      this.emperor_hp=30;
+      this.emperor_age=26;
+      this.emperor_hp=20+Math.floor(Math.random()*20)-Math.floor(Math.random()*20);
       this.emperor_ab=10;
       this.dynasty_hp=100;
       this.dynasty_function_st();
@@ -168,18 +175,19 @@ export default {
     },
     gamemin(){
       this.year=this.year+1;
+      this.event_happen();
       this.opinionData.push(this.dynasty_hp);
       this.yearlist.push(this.year);
       this.gamemin_emperor();
       this.gamemin_dynasty();
       this.dynasty_function_st();
+
     },
     gamemin_dynasty(){
       if(this.emperor_hp>0){
         if(this.dynasty_hp>0){
-          this.dynasty_hp=this.dynasty_hp-Math.floor((this.amuse/15)-(this.hardworking/40));
+          this.dynasty_hp=this.dynasty_hp-(this.amuse/40*5/this.emperor_ab)+(this.hardworking/40*this.emperor_ab/10);
           this.dynasty_age=this.dynasty_age+1;
-
         }
         if(this.dynasty_hp>=100){
           this.dynasty_hp=100;
@@ -233,20 +241,14 @@ export default {
        this.listjson.push({id:this.emperor_id,name:this.emperor,nianhao:this.yearNumber,age:this.emperor_age,jinian:this.jinian,shihao:this.shihao,ab:this.emperor_ab})
     },
     gamemin_emperor_new(){
-      this.dynasty_hp=this.dynasty_hp-5;
+      this.dynasty_hp=this.dynasty_hp-10;
+      if(this.dynasty_hp<=0){
+        this.dynasty_hp=1
+      }
       this.jinian=1;
-      this.randomdata = this.emperor_age;
-      this.emperor_age = this.randomdata-Math.floor(Math.random()*25);
-      while(this.emperor_age<=0){
-        this.emperor_age = this.randomdata-Math.floor(Math.random()*25);
-      }
+      this.emperor_new_age();
       this.emperor_ab = 5+Math.floor(Math.random()*5)-Math.floor(Math.random()*5);
-      this.randomdata = Math.floor(Math.random()*3);
-      if(this.randomdata==0){
-        this.emperor_hp=20+Math.floor(Math.random()*20);
-      }else{
-        this.emperor_hp=20-Math.floor(Math.random()*20);
-      }
+      this.emperor_new_hp();
       this.total_amuse=1;
       this.total_hardworking=1;
     },
@@ -284,6 +286,26 @@ export default {
       this.emperor_lastname = this.emperor_lastname_list[Math.floor(Math.random()*this.emperor_lastname_list.length)]+this.emperor_lastname_list[Math.floor(Math.random()*this.emperor_lastname_list.length)]
       this.emperor = this.emperor_firstname+this.emperor_lastname;
     },
+    emperor_new_hp(){
+      this.randomdata = Math.floor(Math.random()*3);
+      if(this.emperor_age<=35){
+        if(this.randomdata==0){
+        this.emperor_hp=20+Math.floor(Math.random()*20);
+        }else{
+        this.emperor_hp=20-Math.floor(Math.random()*20);
+        }
+      }
+      if(this.emperor_age>35){
+          this.emperor_hp=20-Math.floor(Math.random()*20)+Math.floor(Math.random()*10);
+      }
+    },
+    emperor_new_age(){
+      this.randomdata = this.emperor_age;
+      this.emperor_age = this.randomdata-16-Math.floor(Math.random()*25);
+      while(this.emperor_age<=0){
+        this.emperor_age = Math.floor(Math.random()*50);
+      }
+    },
     yearNumber_change_name(){
       this.yearNumber = this.yearNumber_list[Math.floor(Math.random()*this.yearNumber_list.length)]+this.yearNumber_list[Math.floor(Math.random()*this.yearNumber_list.length)]
     },
@@ -296,12 +318,38 @@ export default {
         this.dynasty_st="国泰民安"
       }else if(this.dynasty_hp>=80){
         this.dynasty_st="风调雨顺"
+      }else if(this.dynasty_hp>=70){
+        this.dynasty_st=""
       }else if(this.dynasty_hp>=60){
         this.dynasty_st="差强人意"
       }else if(this.dynasty_hp>=30){
         this.dynasty_st="风雨飘摇"
-      }else if(this.dynasty_hp<30){
+      }else if(this.dynasty_hp>=20){
         this.dynasty_st="国势倾颓"
+      }else if(this.dynasty_hp>=10){
+        this.dynasty_st="不绝如缕"
+      }else if(this.dynasty_hp>=50){
+        this.dynasty_st="旦夕之间"
+      }
+    },
+    event_happen(){
+      this.event_id_chose();
+      if(this.jinian==1){
+        this.$refs.event.d_time=this.yearNumber+"元年";
+      }else{
+        this.$refs.event.d_time=this.yearNumber+this.jinian+"年";
+      }
+      this.$refs.event.d_event = this.$refs.event.event_list[this.event_id].event;
+      this.$refs.event.d_event_id = this.event_id;
+      this.$refs.event.event_show = [{time:this.$refs.event.d_time,event:this.$refs.event.d_event}] ;
+      this.event_happened.push({time:this.$refs.event.d_time,event:this.$refs.event.d_event});
+      this.$refs.event.event_change();
+      this.emperor_hp = this.emperor_hp + this.$refs.event.data_emperor_hp_change;
+      this.dynasty_hp = this.dynasty_hp + this.$refs.event.data_dynasty_hp_change;
+    },
+    event_id_chose(){
+      if(this.call_event==false){
+        this.event_id=Math.floor(Math.random()*this.$refs.event.event_list.length);
       }
     }
   },
