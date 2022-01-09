@@ -319,9 +319,9 @@ export default {
       }else if(this.dynasty_hp>=80){
         this.dynasty_st="风调雨顺"
       }else if(this.dynasty_hp>=70){
-        this.dynasty_st=""
-      }else if(this.dynasty_hp>=60){
         this.dynasty_st="差强人意"
+      }else if(this.dynasty_hp>=60){
+        this.dynasty_st="山雨欲来"
       }else if(this.dynasty_hp>=30){
         this.dynasty_st="风雨飘摇"
       }else if(this.dynasty_hp>=20){
