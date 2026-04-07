@@ -1,6 +1,15 @@
-dynasty——王朝，一个由 Vue+element 搭建的前端小游戏。
+dynasty——王朝
 
-[开始游戏](https://www.lylelove.top/Dynasty/)
+这是一个纯 Python/PySide6 搭建的桌面小游戏（原基于 Vue+element）。
+
+## 运行游戏
+
+请确保已安装 Python 环境，然后执行以下命令安装依赖并运行：
+
+```bash
+pip install -r requirements.txt
+python main.py
+```
 
 ---
 
@@ -13,6 +22,7 @@ ToDo：
 
 更新日志：
 
+- 纯 Python / PySide6 重构版
 - 22.1.9：回滚 V0.17，修复事件系统错误引发的各自 Bug。
 
 - 22.1.5：更新 V0.17，优化运行数据，修改关于 hp 的部分参数。已完成事件系统，在下个版本将会实装。
