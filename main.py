@@ -89,6 +89,9 @@ class DynastyApp(QMainWindow):
         self.shihao_list_first = ["太祖", "高祖", "世祖"]
         self.shihao_list_common = ["太宗", "高宗", "世宗", "中宗", "仁宗", "孝宗", "宣宗", "神宗", "哲宗", "理宗", "光宗", "宁宗", "英宗", "穆宗", "景宗", "圣宗", "兴宗", "道宗", "明宗", "庄宗", "哀宗", "愍宗", "钦宗", "徽宗", "高宗", "中宗", "玄宗", "代宗", "德宗", "顺宗", "宪宗", "穆宗", "敬宗", "文宗", "武宗", "宣宗", "懿宗", "僖宗", "昭宗", "哀帝"]
         self.shihao = ""
+        self.miaohao = ""
+        self.used_shihao = []
+        self.initial_dynasty_hp = 100
 
         # Event System
         self.event_id = 0
@@ -173,8 +176,8 @@ class DynastyApp(QMainWindow):
         self.end_game_emp_tab = QWidget()
         end_game_emp_layout = QVBoxLayout()
         self.dialog_emperor_list_table = QTableWidget()
-        self.dialog_emperor_list_table.setColumnCount(7)
-        self.dialog_emperor_list_table.setHorizontalHeaderLabels(["序号", "谥号", "姓名", "年龄", "年号", "纪年", "能力"])
+        self.dialog_emperor_list_table.setColumnCount(8)
+        self.dialog_emperor_list_table.setHorizontalHeaderLabels(["序号", "庙号", "谥号", "姓名", "年龄", "年号", "纪年", "能力"])
         self.dialog_emperor_list_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         end_game_emp_layout.addWidget(self.dialog_emperor_list_table)
         self.end_game_emp_tab.setLayout(end_game_emp_layout)
@@ -273,6 +276,7 @@ class DynastyApp(QMainWindow):
         self.emperor_hp = 20 + math.floor(random.random() * 20) - math.floor(random.random() * 20)
         self.emperor_ab = 10
         self.dynasty_hp = 100
+        self.initial_dynasty_hp = 100
         self.dynasty_function_st()
         self.opinionData.append(self.dynasty_hp)
         self.yearlist.append(self.year)
@@ -330,10 +334,63 @@ class DynastyApp(QMainWindow):
                     self.emperor_die = True
 
     def gamemin_shihao(self):
+        # Calculate performance
+        hp_change = self.dynasty_hp - self.initial_dynasty_hp
+        performance_score = self.emperor_ab + (hp_change / 5)
+
+        # Generate Miaohao
         if self.emperor_id == 1:
-            self.shihao = self.dynasty + random.choice(self.shihao_list_first)
+            self.miaohao = random.choice(["太祖", "高祖", "世祖"])
         else:
-            self.shihao = self.dynasty + random.choice(self.shihao_list_common)
+            if performance_score >= 10:
+                self.miaohao = random.choice(["太宗", "高宗", "世宗", "中宗", "圣宗", "成宗", "仁宗", "睿宗"])
+            elif performance_score >= 5:
+                self.miaohao = random.choice(["宣宗", "景宗", "宪宗", "孝宗", "武宗", "真宗", "理宗", "明宗", "神宗"])
+            elif performance_score >= 0:
+                self.miaohao = random.choice(["穆宗", "光宗", "宁宗", "英宗", "敬宗", "文宗", "德宗", "顺宗"])
+            elif performance_score >= -5:
+                self.miaohao = random.choice(["哲宗", "兴宗", "道宗", "庄宗", "钦宗", "徽宗", "玄宗", "代宗"])
+            else:
+                self.miaohao = random.choice(["哀宗", "愍宗", "末帝", "炀帝", "隐帝", "出帝", "废帝", "后主"])
+
+        # Generate Shihao (Tang style: 4 to 8 characters, ending with "皇帝")
+        good_traits = ["神圣", "贤文", "武成", "康献", "懿元", "章世", "景宣", "明昭", "正敬", "恭庄", "肃穆", "翼襄", "烈桓", "威勇", "毅克", "庄御", "安定", "简贞", "匡质", "靖真", "顺思", "皓显", "和元", "高光", "英睿", "博宪", "坚孝", "忠惠", "德仁", "智慎", "礼义", "周敏", "信达", "理清", "直钦", "益良", "度基", "慈齐", "深温", "让密", "厚纯", "勤谦", "友祁", "广淑", "俭灵", "荣厉", "絜舒", "贲逸", "偲逑", "懋宜", "哲察", "通仪", "经庇", "协端", "休悦", "绰容", "确恒", "熙洽", "绍"]
+        bad_traits = ["荒", "戾", "炀", "幽", "隐", "哀", "愍", "悼", "厉", "灵", "惑", "废"]
+
+        available_shihao = []
+        for _ in range(20): # Generate a pool of candidates
+            length = random.choice([4, 5, 6, 7, 8])
+            prefix_length = length - 2 # account for "皇帝"
+            if performance_score < -2:
+                # Poor performance: use fewer good traits, maybe some bad ones, shorter names
+                prefix_length = min(prefix_length, random.choice([2, 4]))
+                chosen_traits = random.choices(good_traits + bad_traits, k=math.ceil(prefix_length/2))
+            elif performance_score >= 8:
+                # Great performance: long titles
+                prefix_length = max(prefix_length, random.choice([4, 6]))
+                chosen_traits = random.choices(good_traits, k=math.ceil(prefix_length/2))
+            else:
+                chosen_traits = random.choices(good_traits, k=math.ceil(prefix_length/2))
+
+            prefix = "".join(chosen_traits)[:prefix_length]
+            candidate = prefix + "皇帝"
+            available_shihao.append(candidate)
+
+        # Ensure uniqueness
+        unique_candidate = None
+        for candidate in available_shihao:
+            if candidate not in self.used_shihao:
+                unique_candidate = candidate
+                break
+
+        if not unique_candidate:
+            # Fallback
+            unique_candidate = "元孝皇帝"
+            while unique_candidate in self.used_shihao:
+                unique_candidate = random.choice(good_traits) + "皇帝"
+
+        self.used_shihao.append(unique_candidate)
+        self.shihao = unique_candidate
 
     def gamemin_emperor_change(self):
         self.listjson.append({
@@ -342,6 +399,7 @@ class DynastyApp(QMainWindow):
             "nianhao": self.yearNumber,
             "age": self.emperor_age,
             "jinian": self.jinian,
+            "miaohao": self.miaohao,
             "shihao": self.shihao,
             "ab": self.emperor_ab
         })
@@ -358,6 +416,7 @@ class DynastyApp(QMainWindow):
         self.emperor_new_hp()
         self.total_amuse = 1
         self.total_hardworking = 1
+        self.initial_dynasty_hp = self.dynasty_hp
 
     def gamemin_dynasty_change(self):
         self.listjson.append({
@@ -366,6 +425,7 @@ class DynastyApp(QMainWindow):
             "nianhao": self.yearNumber,
             "age": self.emperor_age,
             "jinian": self.jinian,
+            "miaohao": self.miaohao,
             "shihao": self.shihao,
             "ab": self.emperor_ab
         })
@@ -379,6 +439,8 @@ class DynastyApp(QMainWindow):
         self.yearlist = []
         self.opinionData = []
         self.event_happened = [{"time": "", "event": ""}]
+        self.used_shihao = []
+        self.initial_dynasty_hp = 100
 
     def dio(self):
         self.emperor_die = False
@@ -530,12 +592,13 @@ class DynastyApp(QMainWindow):
         for i, emp in enumerate(self.listjson):
             self.emperor_list_table.insertRow(i)
             self.emperor_list_table.setItem(i, 0, QTableWidgetItem(str(emp["id"])))
-            self.emperor_list_table.setItem(i, 1, QTableWidgetItem(emp["shihao"]))
-            self.emperor_list_table.setItem(i, 2, QTableWidgetItem(emp["name"]))
-            self.emperor_list_table.setItem(i, 3, QTableWidgetItem(str(emp["age"])))
-            self.emperor_list_table.setItem(i, 4, QTableWidgetItem(emp["nianhao"]))
-            self.emperor_list_table.setItem(i, 5, QTableWidgetItem(str(emp["jinian"])))
-            self.emperor_list_table.setItem(i, 6, QTableWidgetItem(str(emp["ab"])))
+            self.emperor_list_table.setItem(i, 1, QTableWidgetItem(emp["miaohao"]))
+            self.emperor_list_table.setItem(i, 2, QTableWidgetItem(emp["shihao"]))
+            self.emperor_list_table.setItem(i, 3, QTableWidgetItem(emp["name"]))
+            self.emperor_list_table.setItem(i, 4, QTableWidgetItem(str(emp["age"])))
+            self.emperor_list_table.setItem(i, 5, QTableWidgetItem(emp["nianhao"]))
+            self.emperor_list_table.setItem(i, 6, QTableWidgetItem(str(emp["jinian"])))
+            self.emperor_list_table.setItem(i, 7, QTableWidgetItem(str(emp["ab"])))
 
     def show_new_emp_dialog(self):
         self.dialog_emp_input.setText(self.emperor)
@@ -553,12 +616,13 @@ class DynastyApp(QMainWindow):
         for i, emp in enumerate(self.listjson):
             self.dialog_emperor_list_table.insertRow(i)
             self.dialog_emperor_list_table.setItem(i, 0, QTableWidgetItem(str(emp["id"])))
-            self.dialog_emperor_list_table.setItem(i, 1, QTableWidgetItem(emp["shihao"]))
-            self.dialog_emperor_list_table.setItem(i, 2, QTableWidgetItem(emp["name"]))
-            self.dialog_emperor_list_table.setItem(i, 3, QTableWidgetItem(str(emp["age"])))
-            self.dialog_emperor_list_table.setItem(i, 4, QTableWidgetItem(emp["nianhao"]))
-            self.dialog_emperor_list_table.setItem(i, 5, QTableWidgetItem(str(emp["jinian"])))
-            self.dialog_emperor_list_table.setItem(i, 6, QTableWidgetItem(str(emp["ab"])))
+            self.dialog_emperor_list_table.setItem(i, 1, QTableWidgetItem(emp["miaohao"]))
+            self.dialog_emperor_list_table.setItem(i, 2, QTableWidgetItem(emp["shihao"]))
+            self.dialog_emperor_list_table.setItem(i, 3, QTableWidgetItem(emp["name"]))
+            self.dialog_emperor_list_table.setItem(i, 4, QTableWidgetItem(str(emp["age"])))
+            self.dialog_emperor_list_table.setItem(i, 5, QTableWidgetItem(emp["nianhao"]))
+            self.dialog_emperor_list_table.setItem(i, 6, QTableWidgetItem(str(emp["jinian"])))
+            self.dialog_emperor_list_table.setItem(i, 7, QTableWidgetItem(str(emp["ab"])))
 
         self.dialog_event_table.setRowCount(0)
         for i, ev in enumerate(self.event_happened[1:]):
@@ -668,8 +732,8 @@ class DynastyApp(QMainWindow):
         tab3_layout.addLayout(self.dyn_info_form)
 
         self.emperor_list_table = QTableWidget()
-        self.emperor_list_table.setColumnCount(7)
-        self.emperor_list_table.setHorizontalHeaderLabels(["序号", "谥号", "姓名", "年龄", "年号", "纪年", "能力"])
+        self.emperor_list_table.setColumnCount(8)
+        self.emperor_list_table.setHorizontalHeaderLabels(["序号", "庙号", "谥号", "姓名", "年龄", "年号", "纪年", "能力"])
         tab3_layout.addWidget(self.emperor_list_table)
 
         self.tab3.setLayout(tab3_layout)
