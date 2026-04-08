@@ -605,19 +605,6 @@ class DynastyApp(QMainWindow):
         self.auto_run_btn.clicked.connect(self.toggle_auto_run)
         self.tab1.setLayout(tab1_layout)
 
-    def toggle_auto_run(self):
-        self.auto_run = not self.auto_run
-        if self.auto_run:
-            self.auto_run_btn.setText("停止运行")
-            self.timer.start(500)
-        else:
-            self.auto_run_btn.setText("自动运行")
-            self.timer.stop()
-
-    def auto_run_step(self):
-        if self.ongame:
-            self.gamemin()
-
         # Tab 2: 皇帝信息 (Emperor Info)
         self.tab2 = QWidget()
         tab2_layout = QVBoxLayout()
@@ -665,6 +652,19 @@ class DynastyApp(QMainWindow):
 
         layout.addWidget(self.tabs)
         self.main_game_screen.setLayout(layout)
+
+    def toggle_auto_run(self):
+        self.auto_run = not self.auto_run
+        if self.auto_run:
+            self.auto_run_btn.setText("停止运行")
+            self.timer.start(500)
+        else:
+            self.auto_run_btn.setText("自动运行")
+            self.timer.stop()
+
+    def auto_run_step(self):
+        if self.ongame:
+            self.gamemin()
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
