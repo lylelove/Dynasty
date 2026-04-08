@@ -89,6 +89,9 @@ class DynastyApp(QMainWindow):
         self.shihao = ""
         self.miaohao = ""
         self.used_shihao = []
+        self.used_miaohao = []
+        self.used_emperor_names = []
+        self.used_nianhao = []
         self.initial_dynasty_hp = 100
 
         # Event System
@@ -276,6 +279,8 @@ class DynastyApp(QMainWindow):
         self.emperor_ab = 10
         self.dynasty_hp = 100
         self.initial_dynasty_hp = 100
+        self.used_emperor_names.append(self.emperor)
+        self.used_nianhao.append(self.yearNumber)
         self.dynasty_function_st()
         self.opinionData.append(self.dynasty_hp)
         self.yearlist.append(self.year)
@@ -339,19 +344,45 @@ class DynastyApp(QMainWindow):
         performance_score = self.emperor_ab + (hp_change / 5)
 
         # Generate Miaohao
+        def get_unique_miaohao(pool):
+            available = list(set(pool) - set(self.used_miaohao))
+            if available:
+                return random.choice(available)
+            return None
+
         if self.emperor_id == 1:
-            self.miaohao = random.choice(["太祖", "高祖", "世祖"])
+            self.miaohao = get_unique_miaohao(["太祖", "高祖", "世祖"]) or "烈祖"
         else:
+            pools = [
+                ["太宗", "高宗", "世宗", "中宗", "圣宗", "成宗", "仁宗", "睿宗", "世祖", "显宗", "熙宗"],
+                ["宣宗", "景宗", "宪宗", "孝宗", "武宗", "真宗", "理宗", "明宗", "神宗", "纯宗", "文宗"],
+                ["穆宗", "光宗", "宁宗", "英宗", "敬宗", "度宗", "德宗", "顺宗", "和宗", "庄宗", "定宗"],
+                ["哲宗", "兴宗", "道宗", "钦宗", "徽宗", "玄宗", "代宗", "端宗", "熙宗", "熹宗", "肃宗"],
+                ["哀宗", "愍宗", "末帝", "炀帝", "隐帝", "出帝", "废帝", "后主", "殇帝", "少帝", "献帝"]
+            ]
+
             if performance_score >= 10:
-                self.miaohao = random.choice(["太宗", "高宗", "世宗", "中宗", "圣宗", "成宗", "仁宗", "睿宗"])
+                target_pool = pools[0]
             elif performance_score >= 5:
-                self.miaohao = random.choice(["宣宗", "景宗", "宪宗", "孝宗", "武宗", "真宗", "理宗", "明宗", "神宗"])
+                target_pool = pools[1]
             elif performance_score >= 0:
-                self.miaohao = random.choice(["穆宗", "光宗", "宁宗", "英宗", "敬宗", "文宗", "德宗", "顺宗"])
+                target_pool = pools[2]
             elif performance_score >= -5:
-                self.miaohao = random.choice(["哲宗", "兴宗", "道宗", "庄宗", "钦宗", "徽宗", "玄宗", "代宗"])
+                target_pool = pools[3]
             else:
-                self.miaohao = random.choice(["哀宗", "愍宗", "末帝", "炀帝", "隐帝", "出帝", "废帝", "后主"])
+                target_pool = pools[4]
+
+            self.miaohao = get_unique_miaohao(target_pool)
+            # Fallback if specific tier is exhausted
+            if not self.miaohao:
+                for fallback_pool in pools:
+                    self.miaohao = get_unique_miaohao(fallback_pool)
+                    if self.miaohao:
+                        break
+            if not self.miaohao:
+                self.miaohao = "元宗" # Last resort fallback
+
+        self.used_miaohao.append(self.miaohao)
 
         # Generate Shihao (Tang style: 4 to 8 characters, ending with "皇帝")
         good_traits = ["神圣", "贤文", "武成", "康献", "懿元", "章世", "景宣", "明昭", "正敬", "恭庄", "肃穆", "翼襄", "烈桓", "威勇", "毅克", "庄御", "安定", "简贞", "匡质", "靖真", "顺思", "皓显", "和元", "高光", "英睿", "博宪", "坚孝", "忠惠", "德仁", "智慎", "礼义", "周敏", "信达", "理清", "直钦", "益良", "度基", "慈齐", "深温", "让密", "厚纯", "勤谦", "友祁", "广淑", "俭灵", "荣厉", "絜舒", "贲逸", "偲逑", "懋宜", "哲察", "通仪", "经庇", "协端", "休悦", "绰容", "确恒", "熙洽", "绍"]
@@ -457,6 +488,9 @@ class DynastyApp(QMainWindow):
         self.opinionData = []
         self.event_happened = [{"time": "", "event": ""}]
         self.used_shihao = []
+        self.used_miaohao = []
+        self.used_emperor_names = []
+        self.used_nianhao = []
         self.initial_dynasty_hp = 100
 
     def dio(self):
@@ -482,12 +516,16 @@ class DynastyApp(QMainWindow):
 
     def emperor_change_name(self):
         self.emperor_firstname = random.choice(list(self.emperor_firstname_list))
-        # 50% chance for a 1-character given name, 50% for 2-character
-        if random.random() < 0.5:
-            self.emperor_lastname = random.choice(list(self.emperor_lastname_list))
-        else:
-            self.emperor_lastname = random.choice(list(self.emperor_lastname_list)) + random.choice(list(self.emperor_lastname_list))
-        self.emperor = self.emperor_firstname + self.emperor_lastname
+        while True:
+            # 50% chance for a 1-character given name, 50% for 2-character
+            if random.random() < 0.5:
+                self.emperor_lastname = random.choice(list(self.emperor_lastname_list))
+            else:
+                self.emperor_lastname = random.choice(list(self.emperor_lastname_list)) + random.choice(list(self.emperor_lastname_list))
+            candidate = self.emperor_firstname + self.emperor_lastname
+            if candidate not in self.used_emperor_names:
+                self.emperor = candidate
+                break
         self.emperor_input.setText(self.emperor)
 
     def emperor_new_hp(self):
@@ -503,20 +541,38 @@ class DynastyApp(QMainWindow):
         # A realistic succession age: an adult heir is usually 15-40 years old
         self.emperor_age = 15 + math.floor(random.random() * 25)
 
+    def get_unique_nianhao(self):
+        available = list(set(self.yearNumber_list) - set(self.used_nianhao))
+        if available:
+            return random.choice(available)
+        else:
+            # Fallback dynamic generation if list is exhausted
+            chars = "建元平太开天宝大中盛和治熙庆兴宁隆顺应永"
+            while True:
+                candidate = random.choice(chars) + random.choice(chars)
+                if candidate not in self.used_nianhao:
+                    return candidate
+
     def yearNumber_change_name(self):
-        self.yearNumber = random.choice(self.yearNumber_list)
+        self.yearNumber = self.get_unique_nianhao()
         self.year_number_input.setText(self.yearNumber)
 
     def dialog_yearNumber_change_name(self):
-        self.yearNumber = random.choice(self.yearNumber_list)
+        self.yearNumber = self.get_unique_nianhao()
+        self.used_nianhao.append(self.yearNumber)
         self.dialog_year_input.setText(self.yearNumber)
 
     def emperor_change_name_after(self):
-        if random.random() < 0.5:
-            self.emperor_lastname = random.choice(list(self.emperor_lastname_list))
-        else:
-            self.emperor_lastname = random.choice(list(self.emperor_lastname_list)) + random.choice(list(self.emperor_lastname_list))
-        self.emperor = self.emperor_firstname + self.emperor_lastname
+        while True:
+            if random.random() < 0.5:
+                self.emperor_lastname = random.choice(list(self.emperor_lastname_list))
+            else:
+                self.emperor_lastname = random.choice(list(self.emperor_lastname_list)) + random.choice(list(self.emperor_lastname_list))
+            candidate = self.emperor_firstname + self.emperor_lastname
+            if candidate not in self.used_emperor_names:
+                self.emperor = candidate
+                self.used_emperor_names.append(candidate)
+                break
         self.dialog_emp_input.setText(self.emperor)
 
     def dynasty_function_st(self):
@@ -574,7 +630,8 @@ class DynastyApp(QMainWindow):
         # Dynamic Nianhao change: occurs if an extreme event happens (-5 or more impact)
         # and has a 20% chance. We reset jinian to 1 when year number changes.
         if abs(self.data_dynasty_hp_change) >= 5 and random.random() < 0.2:
-            self.yearNumber = random.choice(self.yearNumber_list)
+            self.yearNumber = self.get_unique_nianhao()
+            self.used_nianhao.append(self.yearNumber)
             self.jinian = 0  # will be incremented to 1 next tick
             change_event = {"time": self.d_time, "event": f"皇帝为祈福/应天象，改元 {self.yearNumber}。"}
             self.event_happened.append(change_event)
