@@ -176,8 +176,8 @@ class DynastyApp(QMainWindow):
         self.end_game_emp_tab = QWidget()
         end_game_emp_layout = QVBoxLayout()
         self.dialog_emperor_list_table = QTableWidget()
-        self.dialog_emperor_list_table.setColumnCount(8)
-        self.dialog_emperor_list_table.setHorizontalHeaderLabels(["序号", "庙号", "谥号", "姓名", "年龄", "年号", "纪年", "能力"])
+        self.dialog_emperor_list_table.setColumnCount(9)
+        self.dialog_emperor_list_table.setHorizontalHeaderLabels(["序号", "庙号", "谥号", "姓名", "年龄", "年号", "纪年", "治国手腕", "史书评价"])
         self.dialog_emperor_list_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         end_game_emp_layout.addWidget(self.dialog_emperor_list_table)
         self.end_game_emp_tab.setLayout(end_game_emp_layout)
@@ -392,6 +392,21 @@ class DynastyApp(QMainWindow):
         self.used_shihao.append(unique_candidate)
         self.shihao = unique_candidate
 
+        # Generate Historical Verdict (史书评价)
+        if self.emperor_id == 1:
+            self.verdict = "开国之君，肇基宏业"
+        else:
+            if performance_score >= 12:
+                self.verdict = random.choice(["千古一帝，开创盛世", "文治武功，威震海内", "一代明君，泽被苍生"])
+            elif performance_score >= 6:
+                self.verdict = random.choice(["中兴之主，力挽狂澜", "守成有余，天下太平", "知人善任，励精图治"])
+            elif performance_score >= 0:
+                self.verdict = random.choice(["平庸无为，守成之君", "功过参半，治政平平", "因循守旧，乏善可陈"])
+            elif performance_score >= -6:
+                self.verdict = random.choice(["宠信奸佞，朝政日非", "好大喜功，劳民伤财", "昏庸无道，纲纪败坏"])
+            else:
+                self.verdict = random.choice(["亡国之君，宗庙毁绝", "暴虐无道，天下大乱", "沉迷酒色，丧权辱国"])
+
     def gamemin_emperor_change(self):
         self.listjson.append({
             "id": self.emperor_id,
@@ -401,7 +416,8 @@ class DynastyApp(QMainWindow):
             "jinian": self.jinian,
             "miaohao": self.miaohao,
             "shihao": self.shihao,
-            "ab": self.emperor_ab
+            "ab": self.emperor_ab,
+            "verdict": self.verdict
         })
 
     def gamemin_emperor_new(self):
@@ -427,7 +443,8 @@ class DynastyApp(QMainWindow):
             "jinian": self.jinian,
             "miaohao": self.miaohao,
             "shihao": self.shihao,
-            "ab": self.emperor_ab
+            "ab": self.emperor_ab,
+            "verdict": self.verdict
         })
 
     def gamemin_dynasty_new(self):
@@ -507,26 +524,41 @@ class DynastyApp(QMainWindow):
 
     def dynasty_function_st(self):
         if self.dynasty_hp >= 90:
-            self.dynasty_st = "国泰民安"
+            if self.emperor_ab >= 8:
+                self.dynasty_st = "开元盛世，万国来朝"
+            else:
+                self.dynasty_st = "国泰民安，海晏河清"
         elif self.dynasty_hp >= 80:
-            self.dynasty_st = "风调雨顺"
-        elif self.dynasty_hp >= 70:
-            self.dynasty_st = "差强人意"
+            if self.emperor_ab >= 6:
+                self.dynasty_st = "风调雨顺，百业兴旺"
+            else:
+                self.dynasty_st = "天下承平，守成之局"
         elif self.dynasty_hp >= 60:
-            self.dynasty_st = "山雨欲来"
-        elif self.dynasty_hp >= 50:
-            self.dynasty_st = "旦夕之间"
-        elif self.dynasty_hp >= 30:
-            self.dynasty_st = "风雨飘摇"
+            if self.emperor_ab >= 7:
+                self.dynasty_st = "中兴在望，奋发图强"
+            elif self.emperor_ab <= 4:
+                self.dynasty_st = "外强中干，隐患暗生"
+            else:
+                self.dynasty_st = "差强人意，平平无奇"
+        elif self.dynasty_hp >= 40:
+            if self.emperor_ab >= 8:
+                self.dynasty_st = "励精图治，力挽狂澜"
+            else:
+                self.dynasty_st = "山雨欲来，动荡不安"
         elif self.dynasty_hp >= 20:
-            self.dynasty_st = "国势倾颓"
+            if self.emperor_ab >= 9:
+                self.dynasty_st = "独木难支，夕阳无限"
+            else:
+                self.dynasty_st = "风雨飘摇，国势倾颓"
         elif self.dynasty_hp >= 10:
-            self.dynasty_st = "不绝如缕"
+            self.dynasty_st = "不绝如缕，大厦将倾"
         else:
-            self.dynasty_st = "亡国之兆"
+            self.dynasty_st = "亡国之兆，日暮途穷"
 
     def event_happen(self):
         self.event_id_chose()
+
+        # Determine current year string before possible change
         if self.jinian == 1:
             self.d_time = self.yearNumber + "元年"
         else:
@@ -541,6 +573,14 @@ class DynastyApp(QMainWindow):
         self.event_change()
         self.emperor_hp += self.data_emperor_hp_change
         self.dynasty_hp += self.data_dynasty_hp_change
+
+        # Dynamic Nianhao change: occurs if an extreme event happens (-10 or more impact, or big positive impact)
+        # and has a 20% chance. We reset jinian to 1 when year number changes.
+        if abs(self.data_dynasty_hp_change) >= 10 and random.random() < 0.2:
+            self.yearNumber = random.choice(self.yearNumber_list)
+            self.jinian = 0  # will be incremented to 1 next tick
+            change_event = {"time": self.d_time, "event": f"皇帝为祈福/应天象，改元 {self.yearNumber}。"}
+            self.event_happened.append(change_event)
 
     def event_id_chose(self):
         if not self.call_event:
@@ -599,6 +639,7 @@ class DynastyApp(QMainWindow):
             self.emperor_list_table.setItem(i, 5, QTableWidgetItem(emp["nianhao"]))
             self.emperor_list_table.setItem(i, 6, QTableWidgetItem(str(emp["jinian"])))
             self.emperor_list_table.setItem(i, 7, QTableWidgetItem(str(emp["ab"])))
+            self.emperor_list_table.setItem(i, 8, QTableWidgetItem(emp["verdict"]))
 
     def show_new_emp_dialog(self):
         self.dialog_emp_input.setText(self.emperor)
@@ -623,6 +664,7 @@ class DynastyApp(QMainWindow):
             self.dialog_emperor_list_table.setItem(i, 5, QTableWidgetItem(emp["nianhao"]))
             self.dialog_emperor_list_table.setItem(i, 6, QTableWidgetItem(str(emp["jinian"])))
             self.dialog_emperor_list_table.setItem(i, 7, QTableWidgetItem(str(emp["ab"])))
+            self.dialog_emperor_list_table.setItem(i, 8, QTableWidgetItem(emp["verdict"]))
 
         self.dialog_event_table.setRowCount(0)
         for i, ev in enumerate(self.event_happened[1:]):
@@ -660,7 +702,7 @@ class DynastyApp(QMainWindow):
         self.basic_info_form.addRow("年号:", self.year_number_label)
         self.basic_info_form.addRow("纪年:", self.jinian_label)
         self.basic_info_form.addRow("国势:", self.dynasty_st_label)
-        self.basic_info_form.addRow("寿限:", self.emperor_hp_label)
+        self.basic_info_form.addRow("天寿:", self.emperor_hp_label)
 
         tab1_layout.addLayout(self.basic_info_form)
 
@@ -710,8 +752,8 @@ class DynastyApp(QMainWindow):
 
         self.emp_info_form.addRow("姓名:", self.emp_name_label)
         self.emp_info_form.addRow("年龄:", self.emp_age_label)
-        self.emp_info_form.addRow("寿限:", self.emp_hp_label)
-        self.emp_info_form.addRow("能力:", self.emp_ab_label)
+        self.emp_info_form.addRow("天寿:", self.emp_hp_label)
+        self.emp_info_form.addRow("治国手腕:", self.emp_ab_label)
 
         tab2_layout.addLayout(self.emp_info_form)
         self.tab2.setLayout(tab2_layout)
@@ -726,14 +768,14 @@ class DynastyApp(QMainWindow):
         self.dyn_st_label = QLabel()
 
         self.dyn_info_form.addRow("朝代:", self.dyn_name_label)
-        self.dyn_info_form.addRow("国祚:", self.dyn_age_label)
-        self.dyn_info_form.addRow("状态:", self.dyn_st_label)
+        self.dyn_info_form.addRow("王朝国祚:", self.dyn_age_label)
+        self.dyn_info_form.addRow("天下大势:", self.dyn_st_label)
 
         tab3_layout.addLayout(self.dyn_info_form)
 
         self.emperor_list_table = QTableWidget()
-        self.emperor_list_table.setColumnCount(8)
-        self.emperor_list_table.setHorizontalHeaderLabels(["序号", "庙号", "谥号", "姓名", "年龄", "年号", "纪年", "能力"])
+        self.emperor_list_table.setColumnCount(9)
+        self.emperor_list_table.setHorizontalHeaderLabels(["序号", "庙号", "谥号", "姓名", "年龄", "年号", "纪年", "治国手腕", "史书评价"])
         tab3_layout.addWidget(self.emperor_list_table)
 
         self.tab3.setLayout(tab3_layout)
