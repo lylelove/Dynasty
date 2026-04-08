@@ -101,26 +101,26 @@ class DynastyApp(QMainWindow):
             {"time": "", "event": "今年无事发生。", "emperor_hp_change": 0, "dynasty_hp_change": 0},
             {"time": "", "event": "今年无事发生。", "emperor_hp_change": 0, "dynasty_hp_change": 0},
             {"time": "", "event": "今年无事发生。", "emperor_hp_change": 0, "dynasty_hp_change": 0},
-            {"time": "", "event": "风调雨顺，五谷丰登。", "emperor_hp_change": 1, "dynasty_hp_change": 5},
-            {"time": "", "event": "天降祥瑞，国泰民安。", "emperor_hp_change": 1, "dynasty_hp_change": 8},
-            {"time": "", "event": "科举开科，广揽天下贤才。", "emperor_hp_change": 0, "dynasty_hp_change": 6},
-            {"time": "", "event": "边关大捷，扬威海外。", "emperor_hp_change": 1, "dynasty_hp_change": 10},
-            {"time": "", "event": "大兴土木，修建宫殿，劳民伤财。", "emperor_hp_change": -1, "dynasty_hp_change": -8},
-            {"time": "", "event": "黄河决堤，流民遍野，民不聊生。", "emperor_hp_change": -2, "dynasty_hp_change": -12},
-            {"time": "", "event": "地方叛乱，朝野震动。", "emperor_hp_change": -2, "dynasty_hp_change": -10},
-            {"time": "", "event": "后宫干政，朝政混乱。", "emperor_hp_change": -3, "dynasty_hp_change": -7},
-            {"time": "", "event": "宦官专权，陷害忠良。", "emperor_hp_change": -2, "dynasty_hp_change": -9},
-            {"time": "", "event": "外敌入侵，边患严重。", "emperor_hp_change": -2, "dynasty_hp_change": -15},
-            {"time": "", "event": "减免赋税，与民休息。", "emperor_hp_change": 0, "dynasty_hp_change": 8},
-            {"time": "", "event": "瘟疫横行，十室九空。", "emperor_hp_change": -3, "dynasty_hp_change": -12},
-            {"time": "", "event": "藩镇割据，听调不听宣。", "emperor_hp_change": -1, "dynasty_hp_change": -10},
-            {"time": "", "event": "皇帝沉迷声色，不理朝政。", "emperor_hp_change": -3, "dynasty_hp_change": -8},
-            {"time": "", "event": "修建水利，造福百姓。", "emperor_hp_change": -1, "dynasty_hp_change": 6},
-            {"time": "", "event": "开通商路，国库充盈。", "emperor_hp_change": 0, "dynasty_hp_change": 7},
-            {"time": "", "event": "发现金矿，国库大增。", "emperor_hp_change": 0, "dynasty_hp_change": 5},
-            {"time": "", "event": "编纂大典，文化繁荣。", "emperor_hp_change": -1, "dynasty_hp_change": 8},
-            {"time": "", "event": "诸王争储，朝堂党争不断。", "emperor_hp_change": -3, "dynasty_hp_change": -8},
-            {"time": "", "event": "连年干旱，颗粒无收。", "emperor_hp_change": -1, "dynasty_hp_change": -10},
+            {"time": "", "event": "风调雨顺，五谷丰登。", "emperor_hp_change": 1, "dynasty_hp_change": 3},
+            {"time": "", "event": "天降祥瑞，国泰民安。", "emperor_hp_change": 1, "dynasty_hp_change": 4},
+            {"time": "", "event": "科举开科，广揽天下贤才。", "emperor_hp_change": 0, "dynasty_hp_change": 3},
+            {"time": "", "event": "边关大捷，扬威海外。", "emperor_hp_change": 1, "dynasty_hp_change": 5},
+            {"time": "", "event": "大兴土木，修建宫殿，劳民伤财。", "emperor_hp_change": -1, "dynasty_hp_change": -4},
+            {"time": "", "event": "黄河决堤，流民遍野，民不聊生。", "emperor_hp_change": -1, "dynasty_hp_change": -6},
+            {"time": "", "event": "地方叛乱，朝野震动。", "emperor_hp_change": -1, "dynasty_hp_change": -5},
+            {"time": "", "event": "后宫干政，朝政混乱。", "emperor_hp_change": -2, "dynasty_hp_change": -3},
+            {"time": "", "event": "宦官专权，陷害忠良。", "emperor_hp_change": -1, "dynasty_hp_change": -4},
+            {"time": "", "event": "外敌入侵，边患严重。", "emperor_hp_change": -1, "dynasty_hp_change": -7},
+            {"time": "", "event": "减免赋税，与民休息。", "emperor_hp_change": 0, "dynasty_hp_change": 4},
+            {"time": "", "event": "瘟疫横行，十室九空。", "emperor_hp_change": -2, "dynasty_hp_change": -6},
+            {"time": "", "event": "藩镇割据，听调不听宣。", "emperor_hp_change": -1, "dynasty_hp_change": -5},
+            {"time": "", "event": "皇帝沉迷声色，不理朝政。", "emperor_hp_change": -2, "dynasty_hp_change": -4},
+            {"time": "", "event": "修建水利，造福百姓。", "emperor_hp_change": 0, "dynasty_hp_change": 3},
+            {"time": "", "event": "开通商路，国库充盈。", "emperor_hp_change": 0, "dynasty_hp_change": 4},
+            {"time": "", "event": "发现金矿，国库大增。", "emperor_hp_change": 0, "dynasty_hp_change": 3},
+            {"time": "", "event": "编纂大典，文化繁荣。", "emperor_hp_change": 0, "dynasty_hp_change": 4},
+            {"time": "", "event": "诸王争储，朝堂党争不断。", "emperor_hp_change": -2, "dynasty_hp_change": -4},
+            {"time": "", "event": "连年干旱，颗粒无收。", "emperor_hp_change": -1, "dynasty_hp_change": -5},
         ]
         self.data_emperor_hp_change = 0
         self.data_dynasty_hp_change = 0
@@ -271,7 +271,8 @@ class DynastyApp(QMainWindow):
         self.emperor_firstname = self.emperor[0]
         self.firstgame = not self.firstgame
         self.emperor_age = 26
-        self.emperor_hp = 20 + math.floor(random.random() * 20) - math.floor(random.random() * 20)
+        # Start emperor with a solid reign: 20 to 45 years left to live.
+        self.emperor_hp = 20 + math.floor(random.random() * 25)
         self.emperor_ab = 10
         self.dynasty_hp = 100
         self.initial_dynasty_hp = 100
@@ -420,7 +421,7 @@ class DynastyApp(QMainWindow):
         })
 
     def gamemin_emperor_new(self):
-        self.dynasty_hp -= 5
+        self.dynasty_hp -= 2
         if self.dynasty_hp <= 0:
             self.dynasty_hp = 1
         self.jinian = 1
@@ -490,22 +491,17 @@ class DynastyApp(QMainWindow):
         self.emperor_input.setText(self.emperor)
 
     def emperor_new_hp(self):
-        self.randomdata = math.floor(random.random() * 3)
-        if self.emperor_age <= 35:
-            if self.randomdata == 0:
-                self.emperor_hp = 20 + math.floor(random.random() * 20)
-            else:
-                self.emperor_hp = 20 - math.floor(random.random() * 20)
-        if self.emperor_age > 35:
-            self.emperor_hp = 20 - math.floor(random.random() * 20) + math.floor(random.random() * 10)
+        # Target a realistic lifespan: ancient emperors usually lived to 45-65.
+        target_lifespan = 45 + math.floor(random.random() * 25)
+        self.emperor_hp = target_lifespan - self.emperor_age
+
+        # Ensure a minimum reign of 1 year unless they are very old
         if self.emperor_hp <= 0:
-            self.emperor_hp = 1
+            self.emperor_hp = math.floor(random.random() * 5) + 1
 
     def emperor_new_age(self):
-        self.randomdata = self.emperor_age
-        self.emperor_age = self.randomdata - 16 - math.floor(random.random() * 25)
-        while self.emperor_age <= 0:
-            self.emperor_age = math.floor(random.random() * 50)
+        # A realistic succession age: an adult heir is usually 15-40 years old
+        self.emperor_age = 15 + math.floor(random.random() * 25)
 
     def yearNumber_change_name(self):
         self.yearNumber = random.choice(self.yearNumber_list)
@@ -575,9 +571,9 @@ class DynastyApp(QMainWindow):
         self.emperor_hp += self.data_emperor_hp_change
         self.dynasty_hp += self.data_dynasty_hp_change
 
-        # Dynamic Nianhao change: occurs if an extreme event happens (-10 or more impact, or big positive impact)
+        # Dynamic Nianhao change: occurs if an extreme event happens (-5 or more impact)
         # and has a 20% chance. We reset jinian to 1 when year number changes.
-        if abs(self.data_dynasty_hp_change) >= 10 and random.random() < 0.2:
+        if abs(self.data_dynasty_hp_change) >= 5 and random.random() < 0.2:
             self.yearNumber = random.choice(self.yearNumber_list)
             self.jinian = 0  # will be incremented to 1 next tick
             change_event = {"time": self.d_time, "event": f"皇帝为祈福/应天象，改元 {self.yearNumber}。"}
