@@ -167,13 +167,31 @@ class DynastyApp(QMainWindow):
         self.end_game_dialog.resize(600, 400)
         end_game_layout = QVBoxLayout()
 
-        end_game_layout.addWidget(QLabel("皇帝列表"))
+        self.end_game_tabs = QTabWidget()
 
+        # Emperor List Tab
+        self.end_game_emp_tab = QWidget()
+        end_game_emp_layout = QVBoxLayout()
         self.dialog_emperor_list_table = QTableWidget()
         self.dialog_emperor_list_table.setColumnCount(7)
         self.dialog_emperor_list_table.setHorizontalHeaderLabels(["序号", "谥号", "姓名", "年龄", "年号", "纪年", "能力"])
         self.dialog_emperor_list_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
-        end_game_layout.addWidget(self.dialog_emperor_list_table)
+        end_game_emp_layout.addWidget(self.dialog_emperor_list_table)
+        self.end_game_emp_tab.setLayout(end_game_emp_layout)
+
+        # Events Tab
+        self.end_game_event_tab = QWidget()
+        end_game_event_layout = QVBoxLayout()
+        self.dialog_event_table = QTableWidget()
+        self.dialog_event_table.setColumnCount(2)
+        self.dialog_event_table.setHorizontalHeaderLabels(["时间", "事件"])
+        self.dialog_event_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        end_game_event_layout.addWidget(self.dialog_event_table)
+        self.end_game_event_tab.setLayout(end_game_event_layout)
+
+        self.end_game_tabs.addTab(self.end_game_emp_tab, "皇帝列表")
+        self.end_game_tabs.addTab(self.end_game_event_tab, "王朝纪事")
+        end_game_layout.addWidget(self.end_game_tabs)
 
         end_game_layout.addWidget(QLabel("重新开始游戏？"))
 
@@ -272,26 +290,25 @@ class DynastyApp(QMainWindow):
         self.update_ui()
 
     def gamemin_dynasty(self):
-        if self.emperor_hp > 0:
-            if self.dynasty_hp > 0:
-                self.dynasty_hp = self.dynasty_hp - (self.amuse / 40 * 5 / self.emperor_ab) + (self.hardworking / 40 * self.emperor_ab / 10)
-                self.dynasty_age += 1
-            if self.dynasty_hp >= 100:
-                self.dynasty_hp = 100
-            if self.dynasty_hp <= 0:
-                if self.ongame:
-                    self.gamemin_shihao()
-                    self.gamemin_dynasty_change()
-                    self.dynasty_die = True
-                    self.dynasty_hp = 0
-                    self.ongame = False
-                    self.show_end_game_dialog()
-                else:
-                    self.dynasty_die = True
-                    self.dynasty_hp = 0
-            if self.dynasty_hp <= 15:
-                if self.emperor_ab >= 8:
-                    self.dynasty_hp = 15
+        if self.dynasty_hp > 0:
+            self.dynasty_hp = self.dynasty_hp - (self.amuse / 40 * 5 / self.emperor_ab) + (self.hardworking / 40 * self.emperor_ab / 10)
+            self.dynasty_age += 1
+        if self.dynasty_hp >= 100:
+            self.dynasty_hp = 100
+        if self.dynasty_hp <= 0:
+            if self.ongame:
+                self.gamemin_shihao()
+                self.gamemin_dynasty_change()
+                self.dynasty_die = True
+                self.dynasty_hp = 0
+                self.ongame = False
+                self.show_end_game_dialog()
+            else:
+                self.dynasty_die = True
+                self.dynasty_hp = 0
+        if self.dynasty_hp <= 15:
+            if self.emperor_ab >= 8:
+                self.dynasty_hp = 15
 
     def gamemin_emperor(self):
         if self.dynasty_hp > 0:
@@ -336,6 +353,8 @@ class DynastyApp(QMainWindow):
         self.jinian = 1
         self.emperor_new_age()
         self.emperor_ab = 5 + math.floor(random.random() * 5) - math.floor(random.random() * 5)
+        if self.emperor_ab <= 0:
+            self.emperor_ab = 1
         self.emperor_new_hp()
         self.total_amuse = 1
         self.total_hardworking = 1
@@ -353,12 +372,13 @@ class DynastyApp(QMainWindow):
 
     def gamemin_dynasty_new(self):
         self.dynasty_age = 0
-        self.jinian = 0
+        self.jinian = 1
         self.listjson = []
         self.year = 0
-        self.emperor_id = 0
+        self.emperor_id = 1
         self.yearlist = []
         self.opinionData = []
+        self.event_happened = [{"time": "", "event": ""}]
 
     def dio(self):
         self.emperor_die = False
@@ -399,6 +419,8 @@ class DynastyApp(QMainWindow):
                 self.emperor_hp = 20 - math.floor(random.random() * 20)
         if self.emperor_age > 35:
             self.emperor_hp = 20 - math.floor(random.random() * 20) + math.floor(random.random() * 10)
+        if self.emperor_hp <= 0:
+            self.emperor_hp = 1
 
     def emperor_new_age(self):
         self.randomdata = self.emperor_age
@@ -491,6 +513,7 @@ class DynastyApp(QMainWindow):
             self.event_table.insertRow(i)
             self.event_table.setItem(i, 0, QTableWidgetItem(ev["time"]))
             self.event_table.setItem(i, 1, QTableWidgetItem(ev["event"]))
+        self.event_table.scrollToBottom()
 
         # Update Tab 2
         self.emp_name_label.setText(self.emperor)
@@ -536,6 +559,12 @@ class DynastyApp(QMainWindow):
             self.dialog_emperor_list_table.setItem(i, 4, QTableWidgetItem(emp["nianhao"]))
             self.dialog_emperor_list_table.setItem(i, 5, QTableWidgetItem(str(emp["jinian"])))
             self.dialog_emperor_list_table.setItem(i, 6, QTableWidgetItem(str(emp["ab"])))
+
+        self.dialog_event_table.setRowCount(0)
+        for i, ev in enumerate(self.event_happened[1:]):
+            self.dialog_event_table.insertRow(i)
+            self.dialog_event_table.setItem(i, 0, QTableWidgetItem(ev["time"]))
+            self.dialog_event_table.setItem(i, 1, QTableWidgetItem(ev["event"]))
 
         if self.auto_run:
             self.toggle_auto_run()
