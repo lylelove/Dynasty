@@ -11,6 +11,11 @@ pip install -r requirements.txt
 python main.py
 ```
 
+**提示：** 关于皇室和国亲生育力的设定，可以在 `main.py` 的 `gamemin_family_marriage_birth` 方法中进行调整：
+- 修改 `chance` 变量（针对头胎的概率）
+- 修改 `second_chance` 变量（针对二胎的概率）
+从而控制宗亲子嗣的数量和繁衍速度。
+
 ---
 
 ToDo：

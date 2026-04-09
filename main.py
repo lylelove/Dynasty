@@ -21,7 +21,11 @@ class Person:
         self.father_id = father_id
         self.mother_id = mother_id
         self.children = []
-        self.title = "" # 亲王, 郡王, 国公, 公主, etc
+        self.title = "" # Full display title
+        self.title_name = "" # e.g. "晋", "齐", "楚"
+        self.title_rank = 0 # 0=Emperor, 1=亲王, 2=郡王, 3=国公, 4=侯爵, 5=伯爵
+        self.is_heir = False # Whether this person is the designated heir of their father's rank
+        self.has_title = False # Whether they actively hold the rank (true if father is dead or they are independent)
         self.shihao = ""
         self.ability = 5 + math.floor(random.random() * 5) - math.floor(random.random() * 5)
         if self.ability <= 0:
@@ -73,6 +77,8 @@ class DynastyApp(QMainWindow):
         self.next_pid = 1
         self.current_emperor_pid = None
         self.next_emperor_pid = None
+
+        self.available_titles = ["晋", "齐", "楚", "秦", "燕", "赵", "魏", "韩", "鲁", "吴", "越", "周", "宋", "卫", "郑", "陈", "蔡", "曹", "燕", "蜀", "凉", "代", "唐", "徐", "兖", "青", "豫", "扬", "荆", "益", "雍", "幽", "并", "交", "广州", "宁", "冀", "辽", "广", "平", "安", "定", "顺", "康", "靖", "宣", "襄", "成", "端", "庄", "景", "昭", "惠", "文", "武", "恭", "献", "肃", "简", "敬", "和", "温", "纯", "孝", "忠", "信", "义", "明", "德", "嘉", "庆"]
 
         self.charts = ''
         self.opinionData = []
@@ -330,6 +336,7 @@ class DynastyApp(QMainWindow):
         self.gamemin_emperor()
         self.gamemin_dynasty()
         self.gamemin_family_marriage_birth()
+        self.update_crown_prince() # Calls update_heirs internally
         self.gamemin_family_shihao_titles()
         self.dynasty_function_st()
         self.update_ui()
@@ -374,37 +381,76 @@ class DynastyApp(QMainWindow):
 
         return not has_alive_male_heir
 
+    def get_rank_suffix(self, rank):
+        if rank == 1: return "王"
+        if rank == 2: return "郡王"
+        if rank == 3: return "国公"
+        if rank == 4: return "侯"
+        if rank == 5: return "伯"
+        return "爵"
+
     def gamemin_family_shihao_titles(self):
         for p in self.people:
-            # Alive males update titles if they don't have one and reach adulthood (15)
-            if p.is_alive and p.gender == "M" and p.age >= 15 and not p.title and p.id != self.current_emperor_pid:
-                if p.generation == 2: # Emperor's son
-                    p.title = "亲王"
-                elif p.generation == 3: # Grandson
-                    p.title = "郡王"
-                elif p.generation >= 4: # Further descendants
-                    p.title = "国公"
+            # Grant initial titles to those who reached adulthood
+            if p.is_alive and p.gender == "M" and p.age >= 15 and not p.title_name and p.id != self.current_emperor_pid:
+                # Only independent non-heir adults (or heirs of dead fathers) get new independent titles.
+                # Actually, in this cascading system, you get a new title only if you don't inherit one.
+                # Heirs don't get new titles, they inherit. Non-heirs get new titles of lower rank.
+                if not p.is_heir or (p.is_heir and p.has_title):
+                    if not p.has_title and len(self.available_titles) > 0:
+                        p.title_name = self.available_titles.pop(0)
+                        p.has_title = True
 
-            # Alive females
-            elif p.is_alive and p.gender == "F" and p.age >= 15 and not p.title:
-                if p.generation == 2:
-                    p.title = "公主"
-                elif p.generation == 3:
-                    p.title = "郡主"
+            # Format display titles for alive members
+            if p.is_alive and p.id != self.current_emperor_pid and p.title != "太子":
+                if p.has_title and p.title_name:
+                    p.title = f"{p.title_name}{self.get_rank_suffix(p.title_rank)}"
+                elif p.is_heir:
+                    # Heir of a living noble
+                    father = self.get_person_by_id(p.father_id)
+                    if father and father.title_name:
+                        if father.title_rank <= 2:
+                            p.title = f"{father.title_name}世子"
+                        else:
+                            p.title = f"{father.title_name}世孙"
                 else:
-                    p.title = "县主"
+                    p.title = ""
 
             # Dead members logic
             if not p.is_alive and p.death_year == self.year:
                 # Assign shihao for males with titles
-                if p.gender == "M" and p.title in ["亲王", "郡王", "国公"] and not p.shihao:
-                    # Simple shihao generation for nobles
-                    shihao_pool = ["忠", "武", "文", "靖", "康", "简", "烈", "庄", "孝", "恭", "悼", "哀", "隐", "敏", "献", "顺"]
-                    p.shihao = random.choice(shihao_pool) + p.title[-1] # e.g. 忠王, 简公
+                if p.gender == "M" and p.has_title and not p.shihao:
+                    # Evaluate shihao based on ability (max ability is around 15 in this game logic normally, but let's base it on relative scale)
+                    if p.ability >= 8:
+                        shihao_pool = ["武", "文", "明", "宣", "献"]
+                    elif p.ability >= 4:
+                        shihao_pool = ["忠", "靖", "康", "简", "庄", "孝", "恭", "顺"]
+                    else:
+                        shihao_pool = ["悼", "哀", "隐", "愍", "殇", "幽"]
+                    p.shihao = f"{p.title_name}{random.choice(shihao_pool)}{self.get_rank_suffix(p.title_rank)}"
 
-                # Check for 绝嗣
-                if p.gender == "M" and p.title:
-                    p.extinct = self.check_extinct(p.id)
+                # Title Inheritance Logic
+                if p.gender == "M" and p.has_title:
+                    # Find heir to pass the title to
+                    heir = None
+                    for child_id in p.children:
+                        child = self.get_person_by_id(child_id)
+                        if child and child.is_alive and child.is_heir:
+                            heir = child
+                            break
+
+                    if heir:
+                        heir.title_name = p.title_name
+                        heir.has_title = True
+                        p.has_title = False # Handed off
+                    else:
+                        # Check extinction properly
+                        p.extinct = self.check_extinct(p.id)
+
+                        # Line effectively extinct for inheritance purposes if no direct heir found to take the title
+                        if p.title_name:
+                            self.available_titles.append(p.title_name)
+                            p.has_title = False
 
     def get_random_name(self, gender):
         # self.emperor_firstname holds the surname in this game's code logic.
@@ -413,9 +459,25 @@ class DynastyApp(QMainWindow):
         else:
             return self.emperor_firstname + random.choice(list("秀英玉珍慧琼桂兰秋菊红梅雪娇燕婉如意贞淑慈爱和美明媚"))
 
+    def try_spawn_child(self, father, child_rank):
+        # We only record males now. And we don't record if rank > 5.
+        if child_rank > 5:
+            return
+
+        child_name = self.get_random_name("M")
+        child = Person(self.next_pid, child_name, "M", self.year, father.id, None, father.generation + 1)
+        child.title_rank = child_rank
+        self.people.append(child)
+        father.children.append(self.next_pid)
+        self.next_pid += 1
+
     def gamemin_family_marriage_birth(self):
         for p in self.people:
-            if not p.is_alive:
+            if not p.is_alive or p.gender != "M":
+                continue
+
+            # To limit population and focus on nobility, we only process reproduction for emperor and those with rank <= 5
+            if p.title_rank > 5:
                 continue
 
             # Marriage logic: Age > 16, 10% chance per year to marry if not married
@@ -423,30 +485,61 @@ class DynastyApp(QMainWindow):
                 if random.random() < 0.1:
                     p.is_married = True
 
-            # Birth logic: Males have a chance to have a child. Emperor has harem, so no marriage check needed.
+            # Birth logic: Emperor has harem, so no marriage check needed.
             is_emperor = (p.id == self.current_emperor_pid)
-            if (p.is_married or is_emperor) and p.gender == "M" and p.age >= 15 and p.age <= 60:
-                # Emperor has a very high chance (70% per year) to have a child, others lower
-                chance = 0.7 if is_emperor else 0.4
-                if random.random() < chance:
-                    child_gender = "M" if random.random() < 0.5 else "F"
-                    child_name = self.get_random_name(child_gender)
-                    child = Person(self.next_pid, child_name, child_gender, self.year, p.id, None, p.generation + 1)
-                    self.people.append(child)
-                    p.children.append(self.next_pid)
-                    self.next_pid += 1
+            if (p.is_married or is_emperor) and p.age >= 15 and p.age <= 60:
+                # Calculate chance based on rank. Emperor 30%, others 10% (Reduced to fix "too many children" and focus on male heirs)
+                chance = 0.3 if is_emperor else 0.1
 
-                    # Emperor has a 30% chance for a second child, others 10%
-                    second_chance = 0.3 if is_emperor else 0.1
-                    if random.random() < second_chance:
-                        child_gender = "M" if random.random() < 0.5 else "F"
-                        child_name = self.get_random_name(child_gender)
-                        child2 = Person(self.next_pid, child_name, child_gender, self.year, p.id, None, p.generation + 1)
-                        self.people.append(child2)
-                        p.children.append(self.next_pid)
-                        self.next_pid += 1
+                if random.random() < chance:
+                    # Determine child's initial rank status
+                    # The first son inherits the rank (so they get father's rank). Subsequent sons get rank + 1.
+                    # Since we assign heirs later dynamically, we'll assign rank here by looking at existing sons.
+                    existing_sons = [self.get_person_by_id(cid) for cid in p.children]
+                    existing_sons = [s for s in existing_sons if s and s.gender == "M"]
+
+                    if len(existing_sons) == 0:
+                        # First son: gets the same rank as father (will be heir)
+                        # Except for Emperor: Emperor's first son gets rank 0 (太子 placeholder) but officially Emperor's rank is 0, so next rank is 1 (亲王) for non-heirs.
+                        # Wait, for the Emperor, the heir gets Emperor eventually, but as a prince he is rank 0 essentially.
+                        # Actually, let's say all sons of Emperor start at rank 1 (亲王). The heir mechanism will upgrade to 太子.
+                        child_rank = 1 if is_emperor else p.title_rank
+                    else:
+                        # Younger son: gets decreased rank
+                        child_rank = 1 if is_emperor else p.title_rank + 1
+
+                    self.try_spawn_child(p, child_rank)
+
+                    # Emperor has a 10% chance for a second child in the same year
+                    if is_emperor and random.random() < 0.1:
+                        self.try_spawn_child(p, 1) # Another younger son
+
+    def update_heirs(self):
+        # Ensure every noble or emperor designates their eldest living son as heir
+        for p in self.people:
+            if p.is_alive and p.gender == "M" and (p.has_title or p.id == self.current_emperor_pid):
+                # Find current heir
+                current_heir = None
+                eldest_living_son = None
+
+                for child_id in p.children:
+                    child = self.get_person_by_id(child_id)
+                    if child and child.gender == "M":
+                        if child.is_alive:
+                            if eldest_living_son is None or child.age > eldest_living_son.age:
+                                eldest_living_son = child
+                        if child.is_heir:
+                            current_heir = child
+
+                # If current heir is dead or not eldest, reassign
+                if eldest_living_son:
+                    if current_heir and current_heir.id != eldest_living_son.id:
+                        current_heir.is_heir = False
+                    eldest_living_son.is_heir = True
 
     def update_crown_prince(self):
+        self.update_heirs()
+
         # Find if there is already a Crown Prince
         has_taizi = False
         for p in self.people:
@@ -458,17 +551,18 @@ class DynastyApp(QMainWindow):
         if not has_taizi and self.current_emperor_pid:
             emp = self.get_person_by_id(self.current_emperor_pid)
             if emp:
-                # Find eldest living male son
-                eldest_son = None
+                # Find eldest living male son (should be the designated heir)
                 for child_id in emp.children:
                     child = self.get_person_by_id(child_id)
-                    if child and child.is_alive and child.gender == "M":
-                        if eldest_son is None or child.age > eldest_son.age:
-                            eldest_son = child
+                    if child and child.is_alive and child.is_heir:
+                        # Reclaim any title the heir had
+                        if child.title_name and child.has_title:
+                            self.available_titles.append(child.title_name)
+                            child.has_title = False
 
-                if eldest_son:
-                    eldest_son.title = "太子"
-                    self.next_emperor_pid = eldest_son.id
+                        child.title = "太子"
+                        self.next_emperor_pid = child.id
+                        break
 
     def find_collateral_successor(self):
         # Look for the closest male relative.
@@ -559,6 +653,12 @@ class DynastyApp(QMainWindow):
                         self.gamemin_dynasty_change()
                         self.show_end_game_dialog()
                     else:
+                        # If the successor had a title, reclaim it so it can be used again
+                        succ = self.get_person_by_id(succ_id)
+                        if succ and succ.has_title and succ.title_name:
+                            self.available_titles.append(succ.title_name)
+                            succ.has_title = False
+
                         self.next_emperor_pid = succ_id
                         self.ongame = False
                         self.show_new_emp_dialog()
@@ -732,6 +832,7 @@ class DynastyApp(QMainWindow):
         self.next_pid = 1
         self.current_emperor_pid = None
         self.next_emperor_pid = None
+        self.available_titles = ["晋", "齐", "楚", "秦", "燕", "赵", "魏", "韩", "鲁", "吴", "越", "周", "宋", "卫", "郑", "陈", "蔡", "曹", "燕", "蜀", "凉", "代", "唐", "徐", "兖", "青", "豫", "扬", "荆", "益", "雍", "幽", "并", "交", "广州", "宁", "冀", "辽", "广", "平", "安", "定", "顺", "康", "靖", "宣", "襄", "成", "端", "庄", "景", "昭", "惠", "文", "武", "恭", "献", "肃", "简", "敬", "和", "温", "纯", "孝", "忠", "信", "义", "明", "德", "嘉", "庆"]
         self.dynasty_age = 0
         self.jinian = 1
         self.listjson = []
