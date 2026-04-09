@@ -17,29 +17,6 @@ from PySide6.QtWidgets import (
 
 
 
-class Person:
-    def __init__(self, pid, name, gender, birth_year, father_id, mother_id, generation):
-        self.id = pid
-        self.name = name
-        self.gender = gender # "M" or "F"
-        self.birth_year = birth_year
-        self.death_year = -1
-        self.father_id = father_id
-        self.mother_id = mother_id
-        self.children = []
-        self.title = "" # 亲王, 郡王, 国公, 公主, etc
-        self.shihao = ""
-        self.ability = 5 + math.floor(random.random() * 5) - math.floor(random.random() * 5)
-        if self.ability <= 0:
-            self.ability = 1
-        self.hp = 20 + math.floor(random.random() * 40) # life expectancy
-        self.age = 0
-        self.is_married = False
-        self.is_alive = True
-        self.generation = generation # Generation distance from first emperor
-        self.extinct = False # 绝嗣
-
-
 class DynastyApp(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -75,11 +52,6 @@ class DynastyApp(QMainWindow):
         self.timer.timeout.connect(self.auto_run_step)
 
     def init_game_state(self):
-        self.people = []
-        self.next_pid = 1
-        self.current_emperor_pid = None
-        self.next_emperor_pid = None
-
         self.charts = ''
         self.opinionData = []
         self.yearlist = []
@@ -305,18 +277,6 @@ class DynastyApp(QMainWindow):
         # Start emperor with a solid reign: 20 to 45 years left to live.
         self.emperor_hp = 20 + math.floor(random.random() * 25)
         self.emperor_ab = 10
-
-        # Create first Emperor Person
-        emp_person = Person(self.next_pid, self.emperor, "M", self.year - self.emperor_age, None, None, 1)
-        emp_person.age = self.emperor_age
-        emp_person.hp = self.emperor_hp
-        emp_person.ability = self.emperor_ab
-        emp_person.title = "皇帝"
-        emp_person.is_married = True # Assume married
-        self.people.append(emp_person)
-        self.current_emperor_pid = emp_person.id
-        self.next_pid += 1
-
         self.dynasty_hp = 100
         self.initial_dynasty_hp = 100
         self.used_emperor_names.append(self.emperor)
@@ -332,164 +292,10 @@ class DynastyApp(QMainWindow):
         self.event_happen()
         self.opinionData.append(self.dynasty_hp)
         self.yearlist.append(self.year)
-        self.gamemin_family_aging_death()
         self.gamemin_emperor()
         self.gamemin_dynasty()
-        self.gamemin_family_marriage_birth()
-        self.gamemin_family_shihao_titles()
         self.dynasty_function_st()
         self.update_ui()
-
-    def get_person_by_id(self, pid):
-        for p in self.people:
-            if p.id == pid:
-                return p
-        return None
-
-    def gamemin_family_aging_death(self):
-        for p in self.people:
-            if p.is_alive and p.id != self.current_emperor_pid:
-                p.age += 1
-                p.hp -= 1
-                if p.hp <= 0:
-                    p.is_alive = False
-                    p.death_year = self.year
-
-    def get_descendants(self, pid):
-        descendants = []
-        p = self.get_person_by_id(pid)
-        if p:
-            for child_id in p.children:
-                descendants.append(child_id)
-                descendants.extend(self.get_descendants(child_id))
-        return descendants
-
-    def check_extinct(self, pid):
-        p = self.get_person_by_id(pid)
-        if not p or p.gender != "M":
-            return False
-
-        # Check if any male descendants are alive
-        descendant_ids = self.get_descendants(pid)
-        has_alive_male_heir = False
-        for d_id in descendant_ids:
-            d = self.get_person_by_id(d_id)
-            if d and d.gender == "M" and d.is_alive:
-                has_alive_male_heir = True
-                break
-
-        return not has_alive_male_heir
-
-    def gamemin_family_shihao_titles(self):
-        for p in self.people:
-            # Alive males update titles if they don't have one and reach adulthood (15)
-            if p.is_alive and p.gender == "M" and p.age >= 15 and not p.title and p.id != self.current_emperor_pid:
-                if p.generation == 2: # Emperor's son
-                    p.title = "亲王"
-                elif p.generation == 3: # Grandson
-                    p.title = "郡王"
-                elif p.generation >= 4: # Further descendants
-                    p.title = "国公"
-
-            # Alive females
-            elif p.is_alive and p.gender == "F" and p.age >= 15 and not p.title:
-                if p.generation == 2:
-                    p.title = "公主"
-                elif p.generation == 3:
-                    p.title = "郡主"
-                else:
-                    p.title = "县主"
-
-            # Dead members logic
-            if not p.is_alive and p.death_year == self.year:
-                # Assign shihao for males with titles
-                if p.gender == "M" and p.title in ["亲王", "郡王", "国公"] and not p.shihao:
-                    # Simple shihao generation for nobles
-                    shihao_pool = ["忠", "武", "文", "靖", "康", "简", "烈", "庄", "孝", "恭", "悼", "哀", "隐", "敏", "献", "顺"]
-                    p.shihao = random.choice(shihao_pool) + p.title[-1] # e.g. 忠王, 简公
-
-                # Check for 绝嗣
-                if p.gender == "M" and p.title:
-                    p.extinct = self.check_extinct(p.id)
-
-    def get_random_name(self, gender):
-        # self.emperor_firstname holds the surname in this game's code logic.
-        if gender == "M":
-            return self.emperor_firstname + random.choice(list(self.emperor_lastname_list))
-        else:
-            return self.emperor_firstname + random.choice(list("秀英玉珍慧琼桂兰秋菊红梅雪娇燕婉如意贞淑慈爱和美明媚"))
-
-    def gamemin_family_marriage_birth(self):
-        for p in self.people:
-            if not p.is_alive:
-                continue
-
-            # Marriage logic: Age > 16, 10% chance per year to marry if not married
-            if p.age >= 16 and not p.is_married:
-                if random.random() < 0.1:
-                    p.is_married = True
-
-            # Birth logic: Married males have a chance to have a child
-            if p.is_married and p.gender == "M" and p.age >= 18 and p.age <= 60:
-                # Emperor has higher chance, others lower
-                chance = 0.2 if p.id == self.current_emperor_pid else 0.05
-                if random.random() < chance:
-                    child_gender = "M" if random.random() < 0.5 else "F"
-                    child_name = self.get_random_name(child_gender)
-                    child = Person(self.next_pid, child_name, child_gender, self.year, p.id, None, p.generation + 1)
-                    self.people.append(child)
-                    p.children.append(self.next_pid)
-                    self.next_pid += 1
-
-    def update_crown_prince(self):
-        # Find if there is already a Crown Prince
-        has_taizi = False
-        for p in self.people:
-            if p.is_alive and p.title == "太子":
-                has_taizi = True
-                self.next_emperor_pid = p.id
-                break
-
-        if not has_taizi and self.current_emperor_pid:
-            emp = self.get_person_by_id(self.current_emperor_pid)
-            if emp:
-                # Find eldest living male son
-                eldest_son = None
-                for child_id in emp.children:
-                    child = self.get_person_by_id(child_id)
-                    if child and child.is_alive and child.gender == "M":
-                        if eldest_son is None or child.age > eldest_son.age:
-                            eldest_son = child
-
-                if eldest_son:
-                    eldest_son.title = "太子"
-                    self.next_emperor_pid = eldest_son.id
-
-    def find_collateral_successor(self):
-        # Look for the closest male relative.
-        # Strategy: find all living males, sort by generation ascending, then age descending
-        candidates = []
-        for p in self.people:
-            if p.is_alive and p.gender == "M" and p.id != self.current_emperor_pid:
-                candidates.append(p)
-
-        if not candidates:
-            return None
-
-        # Sort candidates
-        candidates.sort(key=lambda x: (x.generation, -x.age))
-        return candidates[0].id
-
-    def find_successor(self):
-        self.update_crown_prince()
-        if self.next_emperor_pid:
-            # Recheck if the prince is alive
-            p = self.get_person_by_id(self.next_emperor_pid)
-            if p and p.is_alive:
-                return self.next_emperor_pid
-
-        # Find collateral
-        return self.find_collateral_successor()
 
     def gamemin_dynasty(self):
         if self.dynasty_hp > 0:
@@ -520,43 +326,14 @@ class DynastyApp(QMainWindow):
                 self.jinian += 1
                 self.randomdata = random.random()
                 self.emperor_hp -= 1
-
-                # Sync emperor's age with Person object
-                emp_person = self.get_person_by_id(self.current_emperor_pid)
-                if emp_person:
-                    emp_person.age = self.emperor_age
-                    emp_person.hp = self.emperor_hp
-
             if self.emperor_hp <= 0:
-                # Mark person as dead
-                emp_person = self.get_person_by_id(self.current_emperor_pid)
-                if emp_person:
-                    emp_person.hp = 0
-                    emp_person.is_alive = False
-                    emp_person.death_year = self.year
-
                 if self.ongame:
                     self.gamemin_shihao()
-                    if emp_person:
-                        emp_person.shihao = self.miaohao # Use miaohao for emperors
-
                     self.emperor_die = True
                     self.gamemin_emperor_change()
                     self.emperor_hp = 0
-
-                    # Find successor
-                    succ_id = self.find_successor()
-                    if succ_id is None:
-                        # No successor found, dynasty ends
-                        self.ongame = False
-                        self.dynasty_die = True
-                        self.dynasty_hp = 0
-                        self.gamemin_dynasty_change()
-                        self.show_end_game_dialog()
-                    else:
-                        self.next_emperor_pid = succ_id
-                        self.ongame = False
-                        self.show_new_emp_dialog()
+                    self.ongame = False
+                    self.show_new_emp_dialog()
                 else:
                     self.emperor_hp = 0
                     self.emperor_die = True
@@ -679,32 +456,11 @@ class DynastyApp(QMainWindow):
         if self.dynasty_hp <= 0:
             self.dynasty_hp = 1
         self.jinian = 1
-
-        # Inherit from chosen successor if one exists
-        if self.next_emperor_pid:
-            succ = self.get_person_by_id(self.next_emperor_pid)
-            if succ:
-                self.emperor = succ.name
-                self.emperor_age = succ.age
-                self.emperor_ab = succ.ability
-                self.emperor_hp = succ.hp
-                succ.title = "皇帝"
-                self.current_emperor_pid = succ.id
-                self.next_emperor_pid = None
-            else:
-                # Fallback if successor doesn't exist
-                self.emperor_new_age()
-                self.emperor_ab = 5 + math.floor(random.random() * 5) - math.floor(random.random() * 5)
-                if self.emperor_ab <= 0:
-                    self.emperor_ab = 1
-                self.emperor_new_hp()
-        else:
-            self.emperor_new_age()
-            self.emperor_ab = 5 + math.floor(random.random() * 5) - math.floor(random.random() * 5)
-            if self.emperor_ab <= 0:
-                self.emperor_ab = 1
-            self.emperor_new_hp()
-
+        self.emperor_new_age()
+        self.emperor_ab = 5 + math.floor(random.random() * 5) - math.floor(random.random() * 5)
+        if self.emperor_ab <= 0:
+            self.emperor_ab = 1
+        self.emperor_new_hp()
         self.total_amuse = 1
         self.total_hardworking = 1
         self.initial_dynasty_hp = self.dynasty_hp
@@ -723,10 +479,6 @@ class DynastyApp(QMainWindow):
         })
 
     def gamemin_dynasty_new(self):
-        self.people = []
-        self.next_pid = 1
-        self.current_emperor_pid = None
-        self.next_emperor_pid = None
         self.dynasty_age = 0
         self.jinian = 1
         self.listjson = []
@@ -943,39 +695,11 @@ class DynastyApp(QMainWindow):
             self.emperor_list_table.setItem(i, 7, QTableWidgetItem(str(emp["ab"])))
             self.emperor_list_table.setItem(i, 8, QTableWidgetItem(emp["verdict"]))
 
-        # Update Tab 4
-        if hasattr(self, 'family_table'):
-            self.family_table.setRowCount(0)
-            for i, p in enumerate(self.people):
-                self.family_table.insertRow(i)
-                self.family_table.setItem(i, 0, QTableWidgetItem(str(p.id)))
-                self.family_table.setItem(i, 1, QTableWidgetItem(p.name))
-                self.family_table.setItem(i, 2, QTableWidgetItem("男" if p.gender == "M" else "女"))
-                self.family_table.setItem(i, 3, QTableWidgetItem(str(p.age)))
-                self.family_table.setItem(i, 4, QTableWidgetItem(p.title))
-                self.family_table.setItem(i, 5, QTableWidgetItem("存活" if p.is_alive else "已故"))
-                self.family_table.setItem(i, 6, QTableWidgetItem(p.shihao))
-                self.family_table.setItem(i, 7, QTableWidgetItem(str(p.generation)))
-                self.family_table.setItem(i, 8, QTableWidgetItem("绝嗣" if p.extinct else ""))
-
     def show_new_emp_dialog(self):
+        self.dialog_emp_input.setText(self.emperor)
         self.dialog_year_input.setText(self.yearNumber)
-
-        # If successor was found, populate their name and disable editing
-        if self.next_emperor_pid is not None:
-            succ = self.get_person_by_id(self.next_emperor_pid)
-            if succ:
-                self.dialog_emp_input.setText(succ.name)
-            self.dialog_emp_input.setReadOnly(True)
-            self.dialog_emp_btn.setEnabled(False)
-        else:
-            self.dialog_emp_input.setText(self.emperor)
-            self.dialog_emp_input.setReadOnly(False)
-            self.dialog_emp_btn.setEnabled(True)
-
         if self.auto_run:
-            if self.dialog_emp_btn.isEnabled():
-                self.emperor_change_name_after()
+            self.emperor_change_name_after()
             self.dialog_yearNumber_change_name()
             self.new_emp_confirm()
         else:
@@ -1110,20 +834,10 @@ class DynastyApp(QMainWindow):
 
         self.tab3.setLayout(tab3_layout)
 
-        # Tab 4: 皇室宗亲 (Royal Family Info)
-        self.tab4 = QWidget()
-        tab4_layout = QVBoxLayout()
-        self.family_table = QTableWidget()
-        self.family_table.setColumnCount(9)
-        self.family_table.setHorizontalHeaderLabels(["ID", "姓名", "性别", "年龄", "称号", "状态", "谥号", "代数", "绝嗣"])
-        tab4_layout.addWidget(self.family_table)
-        self.tab4.setLayout(tab4_layout)
-
         # Add tabs
         self.tabs.addTab(self.tab1, "主界面")
         self.tabs.addTab(self.tab2, "皇帝信息")
         self.tabs.addTab(self.tab3, "王朝信息")
-        self.tabs.addTab(self.tab4, "皇室宗亲")
 
         layout.addWidget(self.tabs)
         self.main_game_screen.setLayout(layout)
