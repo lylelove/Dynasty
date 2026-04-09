@@ -418,16 +418,31 @@ class DynastyApp(QMainWindow):
 
             # Dead members logic
             if not p.is_alive and p.death_year == self.year:
-                # Assign shihao for males with titles
-                if p.gender == "M" and p.has_title and not p.shihao:
-                    # Evaluate shihao based on ability (max ability is around 15 in this game logic normally, but let's base it on relative scale)
-                    if p.ability >= 8:
-                        shihao_pool = ["武", "文", "明", "宣", "献"]
+                # Assign shihao for males with titles or heirs
+                if p.gender == "M" and not p.shihao and (p.has_title or p.is_heir or p.title == "太子"):
+                    # Evaluate shihao based on life
+                    if p.age < 15:
+                        shihao_pool = ["殇", "悼", "冲", "闵"]
+                    elif p.ability >= 8:
+                        shihao_pool = ["武", "文", "明", "宣", "献", "桓", "襄"]
                     elif p.ability >= 4:
-                        shihao_pool = ["忠", "靖", "康", "简", "庄", "孝", "恭", "顺"]
+                        shihao_pool = ["忠", "靖", "康", "简", "庄", "孝", "恭", "顺", "平", "定"]
                     else:
-                        shihao_pool = ["悼", "哀", "隐", "愍", "殇", "幽"]
-                    p.shihao = f"{p.title_name}{random.choice(shihao_pool)}{self.get_rank_suffix(p.title_rank)}"
+                        shihao_pool = ["哀", "隐", "愍", "幽", "灵", "厉", "荒"]
+
+                    chosen_shihao = random.choice(shihao_pool)
+
+                    if p.title == "太子":
+                        p.shihao = f"{chosen_shihao}太子"
+                    elif p.has_title:
+                        p.shihao = f"{p.title_name}{chosen_shihao}{self.get_rank_suffix(p.title_rank)}"
+                    elif p.is_heir:
+                        father = self.get_person_by_id(p.father_id)
+                        if father and father.title_name:
+                            suffix = "世子" if father.title_rank <= 2 else "世孙"
+                            p.shihao = f"{father.title_name}{chosen_shihao}{suffix}"
+                        else:
+                            p.shihao = f"{chosen_shihao}世子"
 
                 # Title Inheritance Logic
                 if p.gender == "M" and p.has_title:
@@ -713,26 +728,35 @@ class DynastyApp(QMainWindow):
         self.used_miaohao.append(self.miaohao)
 
         # Generate Shihao (Tang style: 4 to 8 characters, ending with "皇帝")
-        good_traits = ["神圣", "贤文", "武成", "康献", "懿元", "章世", "景宣", "明昭", "正敬", "恭庄", "肃穆", "翼襄", "烈桓", "威勇", "毅克", "庄御", "安定", "简贞", "匡质", "靖真", "顺思", "皓显", "和元", "高光", "英睿", "博宪", "坚孝", "忠惠", "德仁", "智慎", "礼义", "周敏", "信达", "理清", "直钦", "益良", "度基", "慈齐", "深温", "让密", "厚纯", "勤谦", "友祁", "广淑", "俭灵", "荣厉", "絜舒", "贲逸", "偲逑", "懋宜", "哲察", "通仪", "经庇", "协端", "休悦", "绰容", "确恒", "熙洽", "绍"]
-        bad_traits = ["荒", "戾", "炀", "幽", "隐", "哀", "愍", "悼", "厉", "灵", "惑", "废"]
+        # Base modifiers that go before the core characteristic
+        grand_prefixes = ["大圣", "神武", "至道", "体元", "大圣大明", "神文圣武", "睿武昭宣", "明德", "昭明", "建元"]
+
+        # Core characteristic based on ability/performance
+        if performance_score >= 10:
+            core_traits = ["文", "武", "明", "神", "圣", "睿", "光", "高", "太"]
+        elif performance_score >= 5:
+            core_traits = ["宣", "景", "成", "庄", "宪", "敬", "肃", "昭", "孝"]
+        elif performance_score >= 0:
+            core_traits = ["穆", "康", "德", "简", "理", "顺", "和", "平"]
+        elif performance_score >= -5:
+            core_traits = ["隐", "灵", "悼", "哀", "献", "惠", "殇"]
+        else:
+            core_traits = ["炀", "厉", "荒", "幽", "愍", "惑", "废"]
 
         available_shihao = []
-        for _ in range(20): # Generate a pool of candidates
-            length = random.choice([4, 5, 6, 7, 8])
-            prefix_length = length - 2 # account for "皇帝"
-            if performance_score < -2:
-                # Poor performance: use fewer good traits, maybe some bad ones, shorter names
-                prefix_length = min(prefix_length, random.choice([2, 4]))
-                chosen_traits = random.choices(good_traits + bad_traits, k=math.ceil(prefix_length/2))
-            elif performance_score >= 8:
-                # Great performance: long titles
-                prefix_length = max(prefix_length, random.choice([4, 6]))
-                chosen_traits = random.choices(good_traits, k=math.ceil(prefix_length/2))
+        for _ in range(50): # Generate a pool of candidates
+            if performance_score >= 0:
+                # Good emperors get long elaborate titles
+                prefix = random.choice(grand_prefixes)
+                core = random.choice(core_traits)
+                # Sometimes add an extra virture
+                extra_virtue = random.choice(["孝", "仁", "忠", "信", "纯", "慈", "义", ""])
+                candidate = prefix + extra_virtue + core + "皇帝"
             else:
-                chosen_traits = random.choices(good_traits, k=math.ceil(prefix_length/2))
+                # Bad emperors get short titles
+                core = random.choice(core_traits)
+                candidate = core + "皇帝"
 
-            prefix = "".join(chosen_traits)[:prefix_length]
-            candidate = prefix + "皇帝"
             available_shihao.append(candidate)
 
         # Ensure uniqueness
@@ -744,7 +768,7 @@ class DynastyApp(QMainWindow):
 
         if not unique_candidate:
             # Fallback
-            unique_candidate = "元孝皇帝"
+            unique_candidate = "孝安皇帝"
             while unique_candidate in self.used_shihao:
                 unique_candidate = random.choice(good_traits) + "皇帝"
 
@@ -861,6 +885,13 @@ class DynastyApp(QMainWindow):
         self.firstgame = True
         self.gamemin_dynasty_new()
         self.ongame = True
+
+        # When restarting, they go to the start screen.
+        # But we need to clear inputs just in case, or let them input again.
+        self.dynasty_input.setText("")
+        self.emperor_input.setText("")
+        self.year_number_input.setText("")
+
         self.stacked_widget.setCurrentIndex(0)
 
     def dynasty_change_name(self):
