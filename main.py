@@ -429,10 +429,11 @@ class DynastyApp(QMainWindow):
                 if random.random() < 0.1:
                     p.is_married = True
 
-            # Birth logic: Married males have a chance to have a child
-            if p.is_married and p.gender == "M" and p.age >= 18 and p.age <= 60:
-                # Emperor has higher chance, others lower
-                chance = 0.2 if p.id == self.current_emperor_pid else 0.05
+            # Birth logic: Males have a chance to have a child. Emperor has harem, so no marriage check needed.
+            is_emperor = (p.id == self.current_emperor_pid)
+            if (p.is_married or is_emperor) and p.gender == "M" and p.age >= 15 and p.age <= 60:
+                # Emperor has a very high chance (70% per year) to have a child, others lower
+                chance = 0.7 if is_emperor else 0.1
                 if random.random() < chance:
                     child_gender = "M" if random.random() < 0.5 else "F"
                     child_name = self.get_random_name(child_gender)
@@ -440,6 +441,15 @@ class DynastyApp(QMainWindow):
                     self.people.append(child)
                     p.children.append(self.next_pid)
                     self.next_pid += 1
+
+                    # Emperor has a 30% chance for a second child in the same year
+                    if is_emperor and random.random() < 0.3:
+                        child_gender = "M" if random.random() < 0.5 else "F"
+                        child_name = self.get_random_name(child_gender)
+                        child2 = Person(self.next_pid, child_name, child_gender, self.year, p.id, None, p.generation + 1)
+                        self.people.append(child2)
+                        p.children.append(self.next_pid)
+                        self.next_pid += 1
 
     def update_crown_prince(self):
         # Find if there is already a Crown Prince
