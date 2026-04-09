@@ -4,16 +4,10 @@ import random
 from PySide6.QtWidgets import (
     QApplication, QMainWindow, QStackedWidget, QWidget, QVBoxLayout,
     QHBoxLayout, QLabel, QLineEdit, QPushButton, QFormLayout, QDialog,
-    QDialogButtonBox, QHeaderView, QTabWidget, QTableWidget, QSlider, QTableWidgetItem
+    QDialogButtonBox, QHeaderView, QTabWidget, QTableWidget, QSlider, QTableWidgetItem,
+    QTreeWidget, QTreeWidgetItem
 )
 from PySide6.QtCore import Qt, QTimer
-
-import sys
-from PySide6.QtWidgets import (
-    QApplication, QMainWindow, QStackedWidget, QWidget, QVBoxLayout,
-    QHBoxLayout, QLabel, QLineEdit, QPushButton, QFormLayout, QDialog,
-    QDialogButtonBox, QHeaderView, QTabWidget, QTableWidget, QSlider, QTableWidgetItem
-)
 
 
 
@@ -433,7 +427,7 @@ class DynastyApp(QMainWindow):
             is_emperor = (p.id == self.current_emperor_pid)
             if (p.is_married or is_emperor) and p.gender == "M" and p.age >= 15 and p.age <= 60:
                 # Emperor has a very high chance (70% per year) to have a child, others lower
-                chance = 0.7 if is_emperor else 0.1
+                chance = 0.7 if is_emperor else 0.4
                 if random.random() < chance:
                     child_gender = "M" if random.random() < 0.5 else "F"
                     child_name = self.get_random_name(child_gender)
@@ -442,8 +436,9 @@ class DynastyApp(QMainWindow):
                     p.children.append(self.next_pid)
                     self.next_pid += 1
 
-                    # Emperor has a 30% chance for a second child in the same year
-                    if is_emperor and random.random() < 0.3:
+                    # Emperor has a 30% chance for a second child, others 10%
+                    second_chance = 0.3 if is_emperor else 0.1
+                    if random.random() < second_chance:
                         child_gender = "M" if random.random() < 0.5 else "F"
                         child_name = self.get_random_name(child_gender)
                         child2 = Person(self.next_pid, child_name, child_gender, self.year, p.id, None, p.generation + 1)
@@ -956,17 +951,21 @@ class DynastyApp(QMainWindow):
         # Update Tab 4
         if hasattr(self, 'family_table'):
             self.family_table.setRowCount(0)
-            for i, p in enumerate(self.people):
-                self.family_table.insertRow(i)
-                self.family_table.setItem(i, 0, QTableWidgetItem(str(p.id)))
-                self.family_table.setItem(i, 1, QTableWidgetItem(p.name))
-                self.family_table.setItem(i, 2, QTableWidgetItem("男" if p.gender == "M" else "女"))
-                self.family_table.setItem(i, 3, QTableWidgetItem(str(p.age)))
-                self.family_table.setItem(i, 4, QTableWidgetItem(p.title))
-                self.family_table.setItem(i, 5, QTableWidgetItem("存活" if p.is_alive else "已故"))
-                self.family_table.setItem(i, 6, QTableWidgetItem(p.shihao))
-                self.family_table.setItem(i, 7, QTableWidgetItem(str(p.generation)))
-                self.family_table.setItem(i, 8, QTableWidgetItem("绝嗣" if p.extinct else ""))
+            row_idx = 0
+            for p in self.people:
+                if p.gender == "F":
+                    continue
+                self.family_table.insertRow(row_idx)
+                self.family_table.setItem(row_idx, 0, QTableWidgetItem(str(p.id)))
+                self.family_table.setItem(row_idx, 1, QTableWidgetItem(p.name))
+                self.family_table.setItem(row_idx, 2, QTableWidgetItem("男" if p.gender == "M" else "女"))
+                self.family_table.setItem(row_idx, 3, QTableWidgetItem(str(p.age)))
+                self.family_table.setItem(row_idx, 4, QTableWidgetItem(p.title))
+                self.family_table.setItem(row_idx, 5, QTableWidgetItem("存活" if p.is_alive else "已故"))
+                self.family_table.setItem(row_idx, 6, QTableWidgetItem(p.shihao))
+                self.family_table.setItem(row_idx, 7, QTableWidgetItem(str(p.generation)))
+                self.family_table.setItem(row_idx, 8, QTableWidgetItem("绝嗣" if p.extinct else ""))
+                row_idx += 1
 
     def show_new_emp_dialog(self):
         self.dialog_year_input.setText(self.yearNumber)
@@ -990,6 +989,55 @@ class DynastyApp(QMainWindow):
             self.new_emp_confirm()
         else:
             self.new_emp_dialog.exec()
+
+    def show_family_tree_dialog(self, row, column):
+        pid_item = self.family_table.item(row, 0)
+        if not pid_item:
+            return
+
+        pid = int(pid_item.text())
+        person = self.get_person_by_id(pid)
+        if not person:
+            return
+
+        dialog = QDialog(self)
+        dialog.setWindowTitle(f"{person.name} 的家谱")
+        dialog.resize(400, 500)
+
+        layout = QVBoxLayout()
+        tree = QTreeWidget()
+        tree.setHeaderLabel("家族树 (仅显示男嗣)")
+
+        # Build tree recursively
+        def add_node(parent_widget, p_id):
+            p = self.get_person_by_id(p_id)
+            if not p: return
+
+            # Label format: Name (Title) - Status
+            title_str = f" ({p.title})" if p.title else ""
+            status_str = "存活" if p.is_alive else "已故"
+            if p.extinct: status_str += " - 绝嗣"
+
+            item_text = f"{p.name}{title_str} [{status_str}]"
+            item = QTreeWidgetItem(parent_widget, [item_text])
+
+            for child_id in p.children:
+                child = self.get_person_by_id(child_id)
+                # Only show males in tree to keep it simple and focused on lineage
+                if child and child.gender == "M":
+                    add_node(item, child_id)
+
+            item.setExpanded(True)
+
+        add_node(tree, pid)
+        layout.addWidget(tree)
+
+        close_btn = QPushButton("关闭")
+        close_btn.clicked.connect(dialog.accept)
+        layout.addWidget(close_btn)
+
+        dialog.setLayout(layout)
+        dialog.exec()
 
     def show_end_game_dialog(self):
 
@@ -1128,6 +1176,8 @@ class DynastyApp(QMainWindow):
         self.family_table.setHorizontalHeaderLabels(["ID", "姓名", "性别", "年龄", "称号", "状态", "谥号", "代数", "绝嗣"])
         tab4_layout.addWidget(self.family_table)
         self.tab4.setLayout(tab4_layout)
+
+        self.family_table.cellDoubleClicked.connect(self.show_family_tree_dialog)
 
         # Add tabs
         self.tabs.addTab(self.tab1, "主界面")
