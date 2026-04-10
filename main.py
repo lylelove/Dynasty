@@ -23,7 +23,7 @@ class Person:
         self.children = []
         self.title = "" # Full display title
         self.title_name = "" # e.g. "晋", "齐", "楚"
-        self.title_rank = 0 # 0=Emperor, 1=亲王, 2=郡王, 3=国公, 4=侯爵, 5=伯爵
+        self.title_rank = 0 # 0=Emperor, 1=亲王, 2=郡王, 3=国公, 4=郡公, 5=县公, 6=县侯, 7=县伯
         self.is_heir = False # Whether this person is the designated heir of their father's rank
         self.has_title = False # Whether they actively hold the rank (true if father is dead or they are independent)
         self.shihao = ""
@@ -78,9 +78,6 @@ class DynastyApp(QMainWindow):
         self.current_emperor_pid = None
         self.next_emperor_pid = None
 
-        self.available_titles_1 = ["晋", "齐", "楚", "秦", "燕", "赵", "魏", "韩", "鲁", "吴", "越", "周", "宋", "卫", "郑", "陈", "蔡", "曹", "燕", "蜀", "凉", "代", "唐", "徐", "兖", "青", "豫", "扬", "荆", "益", "雍", "幽", "并", "交", "宁", "冀", "辽", "广"]
-        self.available_titles_2 = ["平原", "渤海", "兰陵", "彭城", "河间", "清河", "赵郡", "中山", "太原", "琅琊", "东海", "陈留", "汝南", "颍川", "弘农", "京兆", "安定", "扶风", "天水", "武威", "敦煌", "巨鹿", "乐安", "广陵", "零陵", "桂阳", "武陵", "南阳", "江夏", "长沙", "会稽", "丹阳", "豫章", "汉中", "巴郡", "蜀郡", "广汉", "犍为"]
-
         self.charts = ''
         self.opinionData = []
         self.yearlist = []
@@ -107,12 +104,11 @@ class DynastyApp(QMainWindow):
         self.total_amuse = 1
         self.total_hardworking = 1
         self.listjson = []
+        self.current_emperor_nianhao_history = []
 
         # Name and title lists
         self.dynasty_name = ["夏","商","周","秦","汉","晋","隋","唐","宋","元","明","清"]
-        self.emperor_firstname_list = "赵钱孙李周吴郑王冯陈褚卫蒋沈韩杨朱秦尤许何吕施张孔曹严华金魏陶姜戚谢邹喻柏水窦章云苏潘葛奚范彭郎鲁韦昌马苗凤花方俞任袁柳史唐薛雷贺倪汤滕殷罗毕郝安常乐于时傅皮卞齐康伍余元卜顾孟平黄和穆萧尹姚邵汪祁毛禹狄米贝明计伏成戴谈宋茅庞熊纪舒屈项祝董梁杜阮蓝闵席季麻强贾路娄危江童颜郭梅盛林刁钟徐邱骆高夏蔡田樊胡凌霍虞万支柯管卢莫经房裘干解应宗丁宣邓郁单杭洪包诸左石崔吉钮龚程嵇邢裴陆荣翁荀羊惠甄曲家封储靳段富巫乌焦巴弓山谷车侯全班仰秋仲伊宫宁仇栾暴甘厉戎祖武符刘景詹束龙叶幸司韶黎薄印宿白怀蒲邰从索咸赖卓蔺屠蒙池乔阴能苍双闻党翟谭贡劳逄姬申扶堵冉宰郦雍桑桂濮牛寿通边扈燕冀浦尚农温别庄晏柴瞿阎充慕连茹习宦艾鱼容向古易慎戈廖庾终暨居衡步都耿满弘匡国文寇广禄阙东欧殳沃利蔚越隆师巩聂晁勾敖融冷訾辛阚那简饶空曾毋沙乜养鞠须丰巢关相查后荆红游竺权盖益桓公"
-        self.tang_male_chars = "世民渊建承元辅机如晦靖勣仁贵玄龄知节琼敬德孝恭无忌至忠万机弘泰道安和德清平正明光化成治理信厚仁义礼智宽和温良恭俭敏慎勇毅刚强健硕雄伟俊杰豪杰英才硕彦宏才大略高才卓识俊英俊俊英杰俊哲俊秀俊朗俊逸俊才俊彦俊民俊爽"
-        self.tang_female_chars = "丽华婉太平安乐长宁金仙玉真万春定新昭常阳临川襄城豫章巴陵普安东清河淮兰宣平恩邵"
+        self.init_tang_resources()
         self.emperor_firstname = ""
         self.emperor_lastname = ""
         self.yearNumber_list = ["建元", "元光", "元朔", "元狩", "元鼎", "元封", "太初", "天汉", "太始", "征和", "后元", "始元", "元凤", "平瑞", "本始", "地节", "元康", "神爵", "五凤", "甘露", "黄龙", "初元", "永光", "建昭", "竟宁", "建始", "河平", "阳朔", "鸿嘉", "永始", "元延", "绥和", "建平", "太初元将", "元寿", "元始", "居摄", "初始", "建国", "天凤", "地皇", "更始", "建武", "建武中元", "永平", "建初", "元和", "章和", "永元", "元兴", "延平", "永初", "元初", "永宁", "建光", "延光", "永建", "阳嘉", "永和", "汉安", "建康", "永嘉", "本初", "建和", "和平", "元嘉", "永兴", "永寿", "延熹", "永康", "建宁", "熹平", "光和", "中平", "光熹", "昭宁", "微平", "初平", "兴平", "建安", "延康", "黄初", "太和", "青龙", "景初", "正始", "嘉平", "正元", "甘露", "景元", "咸熙", "泰始", "咸宁", "太康", "太熙", "永熙", "永平", "元康", "永康", "永宁", "太安", "永安", "建武", "永安", "建兴", "永嘉", "建兴", "建武", "太兴", "永昌", "太宁", "咸和", "咸康", "建元", "永和", "升平", "隆和", "兴宁", "太和", "咸安", "宁康", "太元", "隆安", "元兴", "义熙", "元熙", "开皇", "仁寿", "大业", "义宁", "武德", "贞观", "永徽", "显庆", "龙朔", "麟德", "乾封", "总章", "咸亨", "上元", "仪凤", "调露", "永隆", "开耀", "永淳", "弘道", "嗣圣", "文明", "光宅", "垂拱", "永昌", "载初", "天授", "如意", "长寿", "延载", "证圣", "天册万岁", "万岁登封", "万岁通天", "神功", "圣历", "久视", "大足", "长安", "神龙", "景龙", "唐隆", "景云", "太极", "延和", "先天", "开元", "天宝", "至德", "乾元", "上元", "宝应", "广德", "永泰", "大历", "建中", "兴元", "贞元", "永贞", "元和", "长庆", "宝历", "大和", "开成", "会昌", "大中", "咸通", "乾符", "广明", "中和", "光启", "文德", "龙纪", "大顺", "景福", "乾宁", "光化", "天复", "天祐", "建隆", "乾德", "开宝", "太平兴国", "雍熙", "端拱", "淳化", "至道", "咸平", "景德", "大中祥符", "天禧", "乾兴", "天圣", "明道", "景祐", "宝元", "康定", "庆历", "皇祐", "至和", "嘉祐", "治平", "熙宁", "元丰", "元祐", "绍圣", "元符", "建中靖国", "崇宁", "大观", "政和", "重和", "宣和", "靖康", "建炎", "绍兴", "隆兴", "乾道", "纯熙", "淳熙", "绍熙", "庆元", "嘉泰", "开禧", "开禧", "嘉定", "宝庆", "绍定", "端平", "嘉熙", "淳祐", "宝祐", "开庆", "景定", "咸淳", "德祐", "景炎", "祥兴", "中统", "至元", "元贞", "大德", "至大", "皇庆", "延祐", "至治", "泰定", "致和", "天历", "至顺", "元统", "至元", "至正", "洪武", "建文", "永乐", "洪熙", "宣德", "正统", "景泰", "天顺", "成化", "弘治", "正德", "嘉靖", "隆庆", "万历", "泰昌", "天启", "崇祯", "顺治", "康熙", "雍正", "乾隆", "嘉庆", "道光", "咸丰", "同治", "光绪", "宣统"]
@@ -121,6 +117,7 @@ class DynastyApp(QMainWindow):
         self.used_shihao = []
         self.used_miaohao = []
         self.used_emperor_names = []
+        self.used_person_names = []
         self.used_nianhao = []
         self.initial_dynasty_hp = 100
 
@@ -160,6 +157,77 @@ class DynastyApp(QMainWindow):
         self.d_time = ""
         self.d_event = ""
         self.d_event_id = 0
+
+    def init_tang_resources(self):
+        self.tang_surnames = [
+            "李", "赵", "王", "郑", "崔", "卢", "韦", "裴", "杜", "苏", "柳", "薛", "韩", "萧", "房", "长孙",
+            "高", "杨", "郭", "窦", "徐", "宋", "孔", "颜", "陆", "贺", "沈", "岑", "元", "武", "独孤", "宇文"
+        ]
+        self.tang_male_given_single = list("承弘元弘弘思守崇景玄元世重文武德宗道隆光嗣维贞从温弘俨倓恪璿祐祎怡俶俨俊俭倚侃俨恭")
+        self.tang_male_given_double = [
+            "世民", "承乾", "泰和", "弘义", "弘礼", "弘道", "崇义", "崇礼", "景行", "景仁", "玄成", "守礼",
+            "元嘉", "元礼", "宗仪", "宗楚", "德明", "德昭", "道玄", "道兴", "维岳", "从善", "承业", "承礼",
+            "弘文", "弘武", "思恭", "思敬", "守正", "守谦", "景让", "景初", "玄晖", "重润", "重茂", "光弼"
+        ]
+        self.tang_female_given_single = list("婉令宜安永宁和柔华真玉仙德丽贞淑静惠昭义清嘉")
+        self.tang_female_given_double = [
+            "太平", "安乐", "长宁", "金仙", "玉真", "万春", "永宁", "宁国", "和政", "寿安", "新都", "广德",
+            "临川", "襄城", "豫章", "巴陵", "普安", "清河", "常乐", "永嘉", "义阳", "定安", "乐安", "咸宜"
+        ]
+        self.emperor_firstname_list = "".join(self.tang_surnames)
+
+        self.rank_suffix_map = {
+            1: "亲王",
+            2: "郡王",
+            3: "国公",
+            4: "郡公",
+            5: "县公",
+            6: "县侯",
+            7: "县伯",
+        }
+        self.rank_name_pools = {
+            1: ["秦", "晋", "齐", "楚", "燕", "赵", "韩", "魏", "梁", "蜀", "吴", "越", "鲁", "宋", "郑", "陈", "许", "卫", "代", "雍", "岐", "凉", "益", "荆"],
+            2: ["陇西", "清河", "太原", "河间", "平原", "赵郡", "中山", "琅琊", "东平", "彭城", "陈留", "汝南", "颍川", "京兆", "弘农", "扶风", "武威", "南阳", "河东", "河内", "安定", "天水"],
+            3: ["蔡", "曹", "霍", "邓", "申", "谯", "谭", "蒋", "鲁", "许", "郧", "郢", "郜", "芮", "郇", "密"],
+            4: ["彭泽", "安吉", "长乐", "富平", "华阴", "蓝田", "新安", "临晋", "临淄", "曲江", "栎阳", "高陵", "始平", "安邑", "河清", "渭南"],
+            5: ["高阳", "武安", "临川", "新都", "安康", "永安", "安平", "义宁", "咸宁", "乐成", "会昌", "丰城", "宁远", "广平", "平恩", "修武"],
+            6: ["长兴", "永丰", "安吉", "富春", "临海", "安喜", "武宁", "崇仁", "延福", "清源", "安义", "平乡"],
+            7: ["永寿", "清苑", "安福", "崇义", "宁化", "乐安", "永平", "宜春", "临汝", "修文", "安仁", "常宁"],
+        }
+        self.female_title_pools = {
+            "公主": ["太平", "安乐", "长宁", "宁国", "咸宜", "寿安", "和政", "新昌", "万安", "永嘉", "义阳", "广德", "乐安", "宣城", "临川", "襄城"],
+            "郡主": ["清河", "兰陵", "弘农", "颍川", "安定", "河东", "平原", "东阳", "义兴", "临海", "义宁", "会稽"],
+            "县主": ["新都", "高阳", "安平", "永安", "乐成", "广平", "武安", "平恩", "义宁", "修武", "安康", "宁远"],
+            "乡主": ["安仁", "宁化", "崇义", "乐安", "永平", "清苑", "安福", "临汝", "宜春", "修文"],
+        }
+
+        self.emperor_miaohao_founders = ["高祖", "太祖", "世祖"]
+        self.emperor_miaohao_prosperous = ["太宗", "玄宗", "宪宗", "宣宗", "肃宗", "德宗", "睿宗", "中宗"]
+        self.emperor_miaohao_stable = ["顺宗", "代宗", "敬宗", "文宗", "穆宗", "懿宗", "僖宗"]
+        self.emperor_miaohao_decline = ["哀宗", "昭宗", "恭宗", "废帝"]
+        self.emperor_shihao_positive = ["文武大圣大广孝", "神文圣武", "应天顺时", "睿文孝德", "文明武德", "元圣昭献", "大圣大明", "钦明文思"]
+        self.emperor_shihao_neutral = ["恭仁顺德", "温文懿恭", "昭仁广孝", "恭俭庄靖", "宽仁恭惠", "孝和庄宪", "安恭景让"]
+        self.emperor_shihao_negative = ["恭哀", "思", "悼", "哀", "愍", "厉", "灵"]
+        self.empress_shihao_good = ["文德", "昭德", "懿德", "恭顺", "贞顺", "元贞", "柔明", "贤肃", "庄宪", "敬慎"]
+        self.empress_shihao_neutral = ["和仪", "恭静", "顺成", "端和", "淑慎", "庄静", "肃恭"]
+        self.empress_shihao_bad = ["哀思", "悼恭", "思顺", "愍和"]
+        self.taizi_shihao_good = ["懿德", "章怀", "恭仁", "孝敬", "宣懿", "忠肃", "惠昭"]
+        self.taizi_shihao_neutral = ["庄", "昭", "敬", "恭", "思", "悼", "怀"]
+        self.prince_shihao_good = ["恭", "靖", "康", "宪", "敬", "庄", "孝", "忠", "惠", "安"]
+        self.prince_shihao_neutral = ["思", "悼", "怀", "顺", "简", "和", "恪"]
+        self.prince_shihao_bad = ["哀", "愍", "厉", "灵"]
+        self.princess_shihao_good = ["贤", "懿", "淑", "庄", "静", "昭", "宁", "柔", "顺"]
+        self.princess_shihao_neutral = ["悼", "思", "怀", "恭", "惠", "安"]
+
+        self.reset_tang_pools()
+
+    def reset_tang_pools(self):
+        self.available_title_pools = {
+            rank: list(names) for rank, names in self.rank_name_pools.items()
+        }
+        self.available_female_title_pools = {
+            tier: list(names) for tier, names in self.female_title_pools.items()
+        }
 
     def setup_dialogs(self):
 
@@ -301,7 +369,7 @@ class DynastyApp(QMainWindow):
     def gamestart(self):
         if not self.emperor:
             return
-        self.emperor_firstname = self.emperor[0]
+        self.emperor_firstname = self.infer_surname_from_name(self.emperor)
         self.firstgame = not self.firstgame
         self.emperor_age = 26
         # Start emperor with a solid reign: 20 to 45 years left to live.
@@ -322,12 +390,54 @@ class DynastyApp(QMainWindow):
         self.dynasty_hp = 100
         self.initial_dynasty_hp = 100
         self.used_emperor_names.append(self.emperor)
+        self.register_person_name(self.emperor)
         self.used_nianhao.append(self.yearNumber)
+        self.start_new_emperor_nianhao_history()
         self.dynasty_function_st()
         self.opinionData.append(self.dynasty_hp)
         self.yearlist.append(self.year)
         self.update_ui()
         self.stacked_widget.setCurrentIndex(1)
+
+    def start_new_emperor_nianhao_history(self):
+        self.current_emperor_nianhao_history = [{
+            "nianhao": self.yearNumber,
+            "years": 0
+        }]
+
+    def record_current_year_for_nianhao(self):
+        if not self.current_emperor_nianhao_history:
+            self.start_new_emperor_nianhao_history()
+
+        current = self.current_emperor_nianhao_history[-1]
+        if current["nianhao"] != self.yearNumber:
+            self.current_emperor_nianhao_history.append({
+                "nianhao": self.yearNumber,
+                "years": 0
+            })
+            current = self.current_emperor_nianhao_history[-1]
+
+        current["years"] += 1
+
+    def begin_next_nianhao_segment(self):
+        if self.current_emperor_nianhao_history and self.current_emperor_nianhao_history[-1]["nianhao"] == self.yearNumber:
+            return
+        self.current_emperor_nianhao_history.append({
+            "nianhao": self.yearNumber,
+            "years": 0
+        })
+
+    def build_nianhao_summary(self, nianhao_history):
+        if not nianhao_history:
+            return ""
+        parts = []
+        for item in nianhao_history:
+            years = item.get("years", 0)
+            label = item.get("nianhao", "")
+            if years <= 0:
+                continue
+            parts.append(f"{label}{years}年")
+        return "、".join(parts)
 
     def gamemin(self):
         self.year += 1
@@ -384,82 +494,172 @@ class DynastyApp(QMainWindow):
         return not has_alive_male_heir
 
     def get_rank_suffix(self, rank):
-        if rank == 1: return "亲王"
-        if rank == 2: return "郡王"
-        if rank == 3: return "国公"
-        if rank == 4: return "郡公"
-        if rank == 5: return "县公"
-        if rank == 6: return "侯"
-        if rank == 7: return "伯"
-        if rank == 8: return "子"
-        if rank == 9: return "男"
-        return "爵"
+        return self.rank_suffix_map.get(rank, "爵")
+
+    def is_name_used(self, name):
+        return name in self.used_person_names or name in self.used_emperor_names
+
+    def register_person_name(self, name):
+        if name and name not in self.used_person_names:
+            self.used_person_names.append(name)
+
+    def choose_dynasty_surname(self):
+        self.emperor_firstname = random.choice(self.tang_surnames)
+        return self.emperor_firstname
+
+    def infer_surname_from_name(self, full_name):
+        for surname in sorted(self.tang_surnames, key=len, reverse=True):
+            if full_name.startswith(surname):
+                return surname
+        return full_name[0] if full_name else ""
+
+    def generate_given_name(self, gender):
+        if gender == "M":
+            if random.random() < 0.45:
+                return random.choice(self.tang_male_given_single)
+            return random.choice(self.tang_male_given_double)
+
+        if random.random() < 0.45:
+            return random.choice(self.tang_female_given_single)
+        return random.choice(self.tang_female_given_double)
+
+    def generate_full_name(self, gender, surname=None):
+        family_name = surname if surname else random.choice(self.tang_surnames)
+        attempts = 0
+        while attempts < 200:
+            given_name = self.generate_given_name(gender)
+            candidate = family_name + given_name
+            if not self.is_name_used(candidate):
+                return candidate
+            attempts += 1
+
+        suffix = 1
+        while True:
+            candidate = f"{family_name}{self.generate_given_name(gender)}{suffix}"
+            if not self.is_name_used(candidate):
+                return candidate
+            suffix += 1
+
+    def draw_title_name(self, rank):
+        pool = self.available_title_pools.get(rank, [])
+        if pool:
+            return pool.pop(0)
+
+        fallback_pool = self.rank_name_pools.get(rank, [])
+        if fallback_pool:
+            return random.choice(fallback_pool)
+        return ""
+
+    def draw_female_title_name(self, tier):
+        pool = self.available_female_title_pools.get(tier, [])
+        if pool:
+            return pool.pop(0)
+
+        fallback_pool = self.female_title_pools.get(tier, [])
+        if fallback_pool:
+            return random.choice(fallback_pool)
+        return ""
+
+    def get_princess_tier(self, person):
+        if person.title == "公主":
+            return "公主"
+        if person.title == "郡主":
+            return "郡主"
+        if person.title == "县主":
+            return "县主"
+        if person.title == "乡主":
+            return "乡主"
+        return ""
+
+    def ensure_female_title_name(self, person):
+        tier = self.get_princess_tier(person)
+        if tier and not person.title_name:
+            person.title_name = self.draw_female_title_name(tier)
+
+    def format_alive_title(self, person):
+        if person.id == self.current_emperor_pid:
+            return "皇帝"
+        if person.title == "皇后":
+            return "皇后"
+        if person.title == "太子":
+            return "太子"
+        if person.title in ["公主", "郡主", "县主", "乡主"]:
+            self.ensure_female_title_name(person)
+            return f"{person.title_name}{person.title}" if person.title_name else person.title
+        if person.has_title and person.title_name:
+            return f"{person.title_name}{self.get_rank_suffix(person.title_rank)}"
+        if person.is_heir:
+            father = self.get_person_by_id(person.father_id)
+            if father and father.title_name and father.title_rank <= 5:
+                return f"{father.title_name}世子"
+        return ""
+
+    def get_heir_posthumous_suffix(self, father):
+        if father and father.title_rank <= 5:
+            return "世子"
+        return "世子"
+
+    def choose_family_posthumous_word(self, person):
+        if person.age < 8:
+            return random.choice(["殇", "悼"])
+        if person.title == "皇后":
+            pool = self.empress_shihao_good if person.ability >= 7 else self.empress_shihao_neutral
+            if person.ability <= 3:
+                pool = self.empress_shihao_bad
+            return random.choice(pool)
+        if person.title == "太子":
+            pool = self.taizi_shihao_good if person.ability >= 7 else self.taizi_shihao_neutral
+            return random.choice(pool)
+        if person.title in ["公主", "郡主", "县主", "乡主"]:
+            pool = self.princess_shihao_good if person.ability >= 7 else self.princess_shihao_neutral
+            return random.choice(pool)
+
+        if person.ability >= 8:
+            return random.choice(self.prince_shihao_good)
+        if person.ability >= 4:
+            return random.choice(self.prince_shihao_neutral)
+        return random.choice(self.prince_shihao_bad)
+
+    def build_family_posthumous_title(self, person):
+        chosen_shihao = self.choose_family_posthumous_word(person)
+
+        if person.title == "皇后":
+            return f"{chosen_shihao}皇后"
+        if person.title == "太子":
+            return f"{chosen_shihao}太子"
+        if person.title in ["公主", "郡主", "县主", "乡主"]:
+            self.ensure_female_title_name(person)
+            if person.title_name:
+                return f"{person.title_name}{chosen_shihao}{person.title}"
+            return f"{chosen_shihao}{person.title}"
+        if person.has_title and person.title_name:
+            return f"{person.title_name}{chosen_shihao}{self.get_rank_suffix(person.title_rank)}"
+        if person.is_heir:
+            father = self.get_person_by_id(person.father_id)
+            if father and father.title_name:
+                return f"{father.title_name}{chosen_shihao}{self.get_heir_posthumous_suffix(father)}"
+            return f"{chosen_shihao}世子"
+        return ""
 
     def gamemin_family_shihao_titles(self):
         for p in self.people:
             # Grant initial titles to those who reached adulthood
             if p.is_alive and p.gender == "M" and p.age >= 15 and not p.title_name and p.id != self.current_emperor_pid:
-                # Only independent non-heir adults (or heirs of dead fathers) get new independent titles.
-                # Actually, in this cascading system, you get a new title only if you don't inherit one.
-                # Heirs don't get new titles, they inherit. Non-heirs get new titles of lower rank.
                 if not p.is_heir or (p.is_heir and p.has_title):
                     if not p.has_title:
-                        if p.title_rank in [1, 3] and len(self.available_titles_1) > 0:
-                            p.title_name = self.available_titles_1.pop(0)
-                            p.has_title = True
-                        elif p.title_rank not in [1, 3] and len(self.available_titles_2) > 0:
-                            p.title_name = self.available_titles_2.pop(0)
+                        p.title_name = self.draw_title_name(p.title_rank)
+                        if p.title_name:
                             p.has_title = True
 
             # Format display titles for alive members
-            if p.is_alive and p.id != self.current_emperor_pid and p.title != "太子" and p.title != "皇后" and p.title != "公主" and p.title != "县主" and p.title != "乡主":
-                if p.has_title and p.title_name:
-                    p.title = f"{p.title_name}{self.get_rank_suffix(p.title_rank)}"
-                elif p.is_heir:
-                    # Heir of a living noble
-                    father = self.get_person_by_id(p.father_id)
-                    if father and father.title_name:
-                        if father.title_rank <= 2:
-                            p.title = f"{father.title_name}世子"
-                        else:
-                            p.title = f"{father.title_name}世孙"
-                else:
-                    p.title = ""
+            if p.is_alive:
+                p.title = self.format_alive_title(p)
 
             # Dead members logic
             if not p.is_alive and p.death_year == self.year:
                 # Assign shihao
-                if not p.shihao and (p.has_title or p.is_heir or p.title in ["太子", "皇后", "公主"]):
-                    # Evaluate shihao based on life and identity
-                    if p.title == "皇后":
-                        shihao_pool = ["文德", "和思", "昭烈", "敬成", "庄穆", "哀顺", "献明", "昭仪"]
-                        chosen_shihao = random.choice(shihao_pool)
-                        p.shihao = f"{chosen_shihao}皇后"
-                    else:
-                        if p.age < 15:
-                            shihao_pool = ["殇", "悼", "冲", "闵"]
-                        elif p.ability >= 8:
-                            shihao_pool = ["武", "文", "明", "宣", "献", "桓", "襄"]
-                        elif p.ability >= 4:
-                            shihao_pool = ["忠", "靖", "康", "简", "庄", "孝", "恭", "顺", "平", "定"]
-                        else:
-                            shihao_pool = ["哀", "隐", "愍", "幽", "灵", "厉", "荒"]
-
-                        chosen_shihao = random.choice(shihao_pool)
-
-                        if p.title == "太子":
-                            p.shihao = f"{chosen_shihao}太子"
-                        elif p.title == "公主":
-                            p.shihao = f"{p.title_name}{chosen_shihao}公主" if p.title_name else f"{chosen_shihao}公主"
-                        elif p.has_title:
-                            p.shihao = f"{p.title_name}{chosen_shihao}{self.get_rank_suffix(p.title_rank)}"
-                        elif p.is_heir:
-                            father = self.get_person_by_id(p.father_id)
-                            if father and father.title_name:
-                                suffix = "世子" if father.title_rank <= 2 else "世孙"
-                                p.shihao = f"{father.title_name}{chosen_shihao}{suffix}"
-                            else:
-                                p.shihao = f"{chosen_shihao}世子"
+                if not p.shihao and (p.has_title or p.is_heir or p.title in ["太子", "皇后", "公主", "郡主", "县主", "乡主"]):
+                    p.shihao = self.build_family_posthumous_title(p)
 
                 # Title Inheritance Logic
                 if p.gender == "M" and p.has_title:
@@ -481,33 +681,16 @@ class DynastyApp(QMainWindow):
 
                         # Line effectively extinct for inheritance purposes if no direct heir found to take the title
                         if p.title_name:
-                            if p.title_rank in [1, 3]:
-                                self.available_titles_1.append(p.title_name)
-                            else:
-                                self.available_titles_2.append(p.title_name)
+                            self.available_title_pools.setdefault(p.title_rank, []).append(p.title_name)
                             p.has_title = False
 
     def get_random_name(self, gender):
-        # self.emperor_firstname holds the surname in this game's code logic.
-        chars = self.tang_male_chars if gender == "M" else self.tang_female_chars
-
-        while True:
-            if random.random() < 0.5:
-                name = self.emperor_firstname + random.choice(list(chars))
-            else:
-                name = self.emperor_firstname + random.choice(list(chars)) + random.choice(list(chars))
-
-            # Name duplication check
-            exists = False
-            for p in self.people:
-                if p.name == name:
-                    exists = True
-                    break
-            if not exists:
-                return name
+        name = self.generate_full_name(gender, surname=self.emperor_firstname)
+        self.register_person_name(name)
+        return name
 
     def try_spawn_child(self, father, child_rank, force_gender=None):
-        if child_rank > 9:
+        if child_rank > 7:
             return
 
         gender = force_gender if force_gender else random.choice(["M", "F"])
@@ -522,10 +705,13 @@ class DynastyApp(QMainWindow):
                 child.title_rank = 0
             elif father.title_rank == 1:
                 child.title = "郡主"
+                child.title_rank = 0
             elif father.title_rank <= 3:
                 child.title = "县主"
+                child.title_rank = 0
             else:
                 child.title = "乡主"
+                child.title_rank = 0
 
         self.people.append(child)
         father.children.append(self.next_pid)
@@ -546,7 +732,8 @@ class DynastyApp(QMainWindow):
             if p.age >= 16 and not p.is_married:
                 if random.random() < 0.1:
                     p.is_married = True
-                    spouse_name = self.get_random_name("F")
+                    spouse_name = self.generate_full_name("F")
+                    self.register_person_name(spouse_name)
                     spouse = Person(self.next_pid, spouse_name, "F", self.year - p.age + random.randint(-5, 2), None, None, p.generation)
                     spouse.age = p.age - random.randint(-2, 5)
                     spouse.is_married = True
@@ -569,7 +756,7 @@ class DynastyApp(QMainWindow):
                     if len(existing_sons) == 0:
                         child_rank = 1 if is_emperor else p.title_rank
                     else:
-                        child_rank = 1 if is_emperor else min(p.title_rank + 1, 9)
+                        child_rank = 1 if is_emperor else min(p.title_rank + 1, 7)
 
                     self.try_spawn_child(p, child_rank)
 
@@ -619,10 +806,7 @@ class DynastyApp(QMainWindow):
                     if child and child.is_alive and child.is_heir:
                         # Reclaim any title the heir had
                         if child.title_name and child.has_title:
-                            if child.title_rank in [1, 3]:
-                                self.available_titles_1.append(child.title_name)
-                            else:
-                                self.available_titles_2.append(child.title_name)
+                            self.available_title_pools.setdefault(child.title_rank, []).append(child.title_name)
                             child.has_title = False
 
                         child.title = "太子"
@@ -702,7 +886,7 @@ class DynastyApp(QMainWindow):
                 if self.ongame:
                     self.gamemin_shihao()
                     if emp_person:
-                        emp_person.shihao = self.miaohao # Use miaohao for emperors
+                        emp_person.shihao = self.shihao
 
                     self.emperor_die = True
                     self.gamemin_emperor_change()
@@ -721,10 +905,7 @@ class DynastyApp(QMainWindow):
                         # If the successor had a title, reclaim it so it can be used again
                         succ = self.get_person_by_id(succ_id)
                         if succ and succ.has_title and succ.title_name:
-                            if succ.title_rank in [1, 3]:
-                                self.available_titles_1.append(succ.title_name)
-                            else:
-                                self.available_titles_2.append(succ.title_name)
+                            self.available_title_pools.setdefault(succ.title_rank, []).append(succ.title_name)
                             succ.has_title = False
 
                         self.next_emperor_pid = succ_id
@@ -747,62 +928,47 @@ class DynastyApp(QMainWindow):
             return None
 
         if self.emperor_id == 1:
-            self.miaohao = get_unique_miaohao(["高祖", "太祖", "世祖"]) or "烈祖"
+            self.miaohao = get_unique_miaohao(self.emperor_miaohao_founders) or "高祖"
         else:
-            pools = [
-                ["太宗", "玄宗", "宪宗", "宣宗", "中宗", "睿宗", "代宗", "德宗"],
-                ["文宗", "武宗", "穆宗", "敬宗", "昭宗", "哀帝", "殇帝", "顺宗", "和宗"]
-            ]
-            if performance_score >= 5:
-                target_pool = pools[0]
+            if performance_score >= 10:
+                target_pool = self.emperor_miaohao_prosperous
+            elif performance_score >= 3:
+                target_pool = self.emperor_miaohao_stable
             else:
-                target_pool = pools[1]
+                target_pool = self.emperor_miaohao_decline
 
             self.miaohao = get_unique_miaohao(target_pool)
-            # Fallback if specific tier is exhausted
             if not self.miaohao:
-                for fallback_pool in pools:
+                for fallback_pool in [
+                    self.emperor_miaohao_prosperous,
+                    self.emperor_miaohao_stable,
+                    self.emperor_miaohao_decline,
+                ]:
                     self.miaohao = get_unique_miaohao(fallback_pool)
                     if self.miaohao:
                         break
             if not self.miaohao:
-                self.miaohao = "元宗" # Last resort fallback
+                self.miaohao = "元宗"
 
         self.used_miaohao.append(self.miaohao)
 
-        # Generate Shihao (Tang style: 4 to 8 characters, ending with "皇帝")
-        # Base modifiers that go before the core characteristic
-        grand_prefixes = ["大圣", "神武", "至道", "体元", "大圣大明", "神文圣武", "睿武昭宣", "明德", "昭明", "建元", "元文", "文武大圣"]
-
-        # Core characteristic based on ability/performance
         if performance_score >= 10:
-            core_traits = ["文", "武", "明", "神", "圣", "睿", "光", "高", "太"]
-        elif performance_score >= 5:
-            core_traits = ["宣", "景", "成", "庄", "宪", "敬", "肃", "昭", "孝"]
-        elif performance_score >= 0:
-            core_traits = ["穆", "康", "德", "简", "理", "顺", "和", "平"]
-        elif performance_score >= -5:
-            core_traits = ["隐", "灵", "悼", "哀", "献", "惠", "殇"]
+            base_pool = self.emperor_shihao_positive
+            endings = ["皇帝", "大圣皇帝", "大弘孝皇帝"]
+        elif performance_score >= 3:
+            base_pool = self.emperor_shihao_neutral
+            endings = ["皇帝"]
         else:
-            core_traits = ["炀", "厉", "荒", "幽", "愍", "惑", "废"]
+            base_pool = self.emperor_shihao_negative
+            endings = ["皇帝"]
 
         available_shihao = []
-        for _ in range(50): # Generate a pool of candidates
-            if performance_score >= 0:
-                # Good emperors get long elaborate titles
-                prefix = random.choice(grand_prefixes)
-                core = random.choice(core_traits)
-                # Sometimes add an extra virture
-                extra_virtue = random.choice(["孝", "仁", "忠", "信", "纯", "慈", "义", "大", "至", "明", ""])
-                candidate = prefix + extra_virtue + core + "皇帝"
-            else:
-                # Bad emperors get short titles
-                core = random.choice(core_traits)
-                candidate = core + "皇帝"
-
+        for _ in range(40):
+            base = random.choice(base_pool)
+            ending = random.choice(endings)
+            candidate = base if base.endswith("帝") else f"{base}{ending}"
             available_shihao.append(candidate)
 
-        # Ensure uniqueness
         unique_candidate = None
         for candidate in available_shihao:
             if candidate not in self.used_shihao:
@@ -810,10 +976,10 @@ class DynastyApp(QMainWindow):
                 break
 
         if not unique_candidate:
-            # Fallback
-            unique_candidate = "孝安皇帝"
+            fallback_base = "恭安" if performance_score >= 0 else "哀"
+            unique_candidate = f"{fallback_base}皇帝"
             while unique_candidate in self.used_shihao:
-                unique_candidate = random.choice(core_traits) + "皇帝"
+                unique_candidate = f"{fallback_base}{random.choice(['文', '武', '昭', '肃'])}皇帝"
 
         self.used_shihao.append(unique_candidate)
         self.shihao = unique_candidate
@@ -834,12 +1000,15 @@ class DynastyApp(QMainWindow):
                 self.verdict = random.choice(["亡国之君，宗庙毁绝", "暴虐无道，天下大乱", "沉迷酒色，丧权辱国"])
 
     def gamemin_emperor_change(self):
+        nianhao_history = [dict(item) for item in self.current_emperor_nianhao_history if item.get("years", 0) > 0]
+        total_reign_years = sum(item["years"] for item in nianhao_history)
         self.listjson.append({
             "id": self.emperor_id,
             "name": self.emperor,
-            "nianhao": self.yearNumber,
+            "nianhao_history": nianhao_history,
+            "nianhao": self.build_nianhao_summary(nianhao_history),
             "age": self.emperor_age,
-            "jinian": self.jinian,
+            "jinian": total_reign_years,
             "miaohao": self.miaohao,
             "shihao": self.shihao,
             "ab": self.emperor_ab,
@@ -882,12 +1051,15 @@ class DynastyApp(QMainWindow):
         self.initial_dynasty_hp = self.dynasty_hp
 
     def gamemin_dynasty_change(self):
+        nianhao_history = [dict(item) for item in self.current_emperor_nianhao_history if item.get("years", 0) > 0]
+        total_reign_years = sum(item["years"] for item in nianhao_history)
         self.listjson.append({
             "id": self.emperor_id,
             "name": self.emperor,
-            "nianhao": self.yearNumber,
+            "nianhao_history": nianhao_history,
+            "nianhao": self.build_nianhao_summary(nianhao_history),
             "age": self.emperor_age,
-            "jinian": self.jinian,
+            "jinian": total_reign_years,
             "miaohao": self.miaohao,
             "shihao": self.shihao,
             "ab": self.emperor_ab,
@@ -899,11 +1071,11 @@ class DynastyApp(QMainWindow):
         self.next_pid = 1
         self.current_emperor_pid = None
         self.next_emperor_pid = None
-        self.available_titles_1 = ["晋", "齐", "楚", "秦", "燕", "赵", "魏", "韩", "鲁", "吴", "越", "周", "宋", "卫", "郑", "陈", "蔡", "曹", "燕", "蜀", "凉", "代", "唐", "徐", "兖", "青", "豫", "扬", "荆", "益", "雍", "幽", "并", "交", "宁", "冀", "辽", "广"]
-        self.available_titles_2 = ["平原", "渤海", "兰陵", "彭城", "河间", "清河", "赵郡", "中山", "太原", "琅琊", "东海", "陈留", "汝南", "颍川", "弘农", "京兆", "安定", "扶风", "天水", "武威", "敦煌", "巨鹿", "乐安", "广陵", "零陵", "桂阳", "武陵", "南阳", "江夏", "长沙", "会稽", "丹阳", "豫章", "汉中", "巴郡", "蜀郡", "广汉", "犍为"]
+        self.reset_tang_pools()
         self.dynasty_age = 0
         self.jinian = 1
         self.listjson = []
+        self.current_emperor_nianhao_history = []
         self.year = 0
         self.emperor_id = 1
         self.yearlist = []
@@ -912,6 +1084,7 @@ class DynastyApp(QMainWindow):
         self.used_shihao = []
         self.used_miaohao = []
         self.used_emperor_names = []
+        self.used_person_names = []
         self.used_nianhao = []
         self.initial_dynasty_hp = 100
 
@@ -919,6 +1092,7 @@ class DynastyApp(QMainWindow):
         self.emperor_die = False
         self.new_emp_dialog.accept()
         self.gamemin_emperor_new()
+        self.start_new_emperor_nianhao_history()
         self.emperor_id += 1
         self.ongame = True
         self.update_ui()
@@ -944,13 +1118,9 @@ class DynastyApp(QMainWindow):
         self.dynasty_input.setText(self.dynasty)
 
     def emperor_change_name(self):
-        self.emperor_firstname = random.choice(list(self.emperor_firstname_list))
+        self.choose_dynasty_surname()
         while True:
-            # 50% chance for a 1-character given name, 50% for 2-character
-            if random.random() < 0.5:
-                self.emperor_lastname = random.choice(list(self.tang_male_chars))
-            else:
-                self.emperor_lastname = random.choice(list(self.tang_male_chars)) + random.choice(list(self.tang_male_chars))
+            self.emperor_lastname = self.generate_given_name("M")
             candidate = self.emperor_firstname + self.emperor_lastname
             if candidate not in self.used_emperor_names:
                 self.emperor = candidate
@@ -993,10 +1163,7 @@ class DynastyApp(QMainWindow):
 
     def emperor_change_name_after(self):
         while True:
-            if random.random() < 0.5:
-                self.emperor_lastname = random.choice(list(self.tang_male_chars))
-            else:
-                self.emperor_lastname = random.choice(list(self.tang_male_chars)) + random.choice(list(self.tang_male_chars))
+            self.emperor_lastname = self.generate_given_name("M")
             candidate = self.emperor_firstname + self.emperor_lastname
             if candidate not in self.used_emperor_names:
                 self.emperor = candidate
@@ -1051,6 +1218,7 @@ class DynastyApp(QMainWindow):
 
         event_dict = {"time": self.d_time, "event": self.d_event}
         self.event_happened.append(event_dict)
+        self.record_current_year_for_nianhao()
 
         self.event_change()
         self.emperor_hp += self.data_emperor_hp_change
@@ -1061,6 +1229,7 @@ class DynastyApp(QMainWindow):
         if abs(self.data_dynasty_hp_change) >= 5 and random.random() < 0.2:
             self.yearNumber = self.get_unique_nianhao()
             self.used_nianhao.append(self.yearNumber)
+            self.begin_next_nianhao_segment()
             self.jinian = 0  # will be incremented to 1 next tick
             change_event = {"time": self.d_time, "event": f"皇帝为祈福/应天象，改元 {self.yearNumber}。"}
             self.event_happened.append(change_event)
