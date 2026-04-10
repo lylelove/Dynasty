@@ -481,7 +481,10 @@ class DynastyApp(QMainWindow):
 
                         # Line effectively extinct for inheritance purposes if no direct heir found to take the title
                         if p.title_name:
-                            self.available_titles.append(p.title_name)
+                            if p.title_rank in [1, 3]:
+                                self.available_titles_1.append(p.title_name)
+                            else:
+                                self.available_titles_2.append(p.title_name)
                             p.has_title = False
 
     def get_random_name(self, gender):
@@ -616,7 +619,10 @@ class DynastyApp(QMainWindow):
                     if child and child.is_alive and child.is_heir:
                         # Reclaim any title the heir had
                         if child.title_name and child.has_title:
-                            self.available_titles.append(child.title_name)
+                            if child.title_rank in [1, 3]:
+                                self.available_titles_1.append(child.title_name)
+                            else:
+                                self.available_titles_2.append(child.title_name)
                             child.has_title = False
 
                         child.title = "太子"
@@ -715,7 +721,10 @@ class DynastyApp(QMainWindow):
                         # If the successor had a title, reclaim it so it can be used again
                         succ = self.get_person_by_id(succ_id)
                         if succ and succ.has_title and succ.title_name:
-                            self.available_titles.append(succ.title_name)
+                            if succ.title_rank in [1, 3]:
+                                self.available_titles_1.append(succ.title_name)
+                            else:
+                                self.available_titles_2.append(succ.title_name)
                             succ.has_title = False
 
                         self.next_emperor_pid = succ_id
@@ -742,23 +751,12 @@ class DynastyApp(QMainWindow):
         else:
             pools = [
                 ["太宗", "玄宗", "宪宗", "宣宗", "中宗", "睿宗", "代宗", "德宗"],
-                ["文宗", "武宗", "穆宗", "敬宗", "文宗", "昭宗", "哀帝", "殇帝", "顺宗", "和宗"]
+                ["文宗", "武宗", "穆宗", "敬宗", "昭宗", "哀帝", "殇帝", "顺宗", "和宗"]
             ]
             if performance_score >= 5:
                 target_pool = pools[0]
             else:
                 target_pool = pools[1]
-
-            if performance_score >= 10:
-                target_pool = pools[0]
-            elif performance_score >= 5:
-                target_pool = pools[1]
-            elif performance_score >= 0:
-                target_pool = pools[2]
-            elif performance_score >= -5:
-                target_pool = pools[3]
-            else:
-                target_pool = pools[4]
 
             self.miaohao = get_unique_miaohao(target_pool)
             # Fallback if specific tier is exhausted
