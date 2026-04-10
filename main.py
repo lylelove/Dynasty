@@ -141,6 +141,7 @@ class DynastyApp(QMainWindow):
         self.used_given_names = []
         self.current_emperor_family_id = 0
         self.family_id_counter = 0
+        self.emperor_nianhaos = []
 
         # Event System
         self.event_id = 0
@@ -329,6 +330,8 @@ class DynastyApp(QMainWindow):
         self.initial_dynasty_hp = 100
         self.used_emperor_names.append(self.emperor)
         self.used_nianhao.append(self.yearNumber)
+        self.emperor_nianhaos = [{"name": self.yearNumber, "years": 0}]
+        self.init_emperor_in_family()
         self.dynasty_function_st()
         self.opinionData.append(self.dynasty_hp)
         self.yearlist.append(self.year)
@@ -358,20 +361,27 @@ class DynastyApp(QMainWindow):
         return ""
 
     def init_emperor_in_family(self):
-        if self.current_emperor_family_id == 0 or self.current_emperor_family_id not in self.royal_family:
-            self.family_id_counter += 1
+        # We enforce creating a new emperor in the family dict here
+        self.family_id_counter += 1
+
+        # Fallback if self.emperor has changed but firstname/lastname haven't synced
+        if len(self.emperor) > 0:
+            surname = self.emperor[0]
+            given_name = self.emperor[1:]
+        else:
             surname = self.emperor_firstname
             given_name = self.emperor_lastname
+
+        if given_name not in self.used_given_names:
             self.used_given_names.append(given_name)
-            emperor_member = RoyalMember(self.family_id_counter, surname, given_name, self.emperor_age, 0, 0, "", False)
-            emperor_member.hp = self.emperor_hp
-            emperor_member.ab = self.emperor_ab
-            self.royal_family[self.family_id_counter] = emperor_member
-            self.current_emperor_family_id = self.family_id_counter
+
+        emperor_member = RoyalMember(self.family_id_counter, surname, given_name, self.emperor_age, 0, 0, "", False)
+        emperor_member.hp = self.emperor_hp
+        emperor_member.ab = self.emperor_ab
+        self.royal_family[self.family_id_counter] = emperor_member
+        self.current_emperor_family_id = self.family_id_counter
 
     def gamemin_family(self):
-        if not self.royal_family:
-             self.init_emperor_in_family()
 
         # Age members and handle death
         for m_id, member in list(self.royal_family.items()):
@@ -490,6 +500,8 @@ class DynastyApp(QMainWindow):
             if self.emperor_hp > 0:
                 self.emperor_age += 1
                 self.jinian += 1
+                if self.emperor_nianhaos:
+                    self.emperor_nianhaos[-1]["years"] += 1
                 self.randomdata = random.random()
                 self.emperor_hp -= 1
                 if self.current_emperor_family_id in self.royal_family:
@@ -606,19 +618,21 @@ class DynastyApp(QMainWindow):
                 self.verdict = random.choice(["亡国之君，宗庙毁绝", "暴虐无道，天下大乱", "沉迷酒色，丧权辱国"])
 
     def gamemin_emperor_change(self):
+        nianhaos_str = "、".join([f"{n['name']}({max(1, n['years'])}年)" for n in self.emperor_nianhaos])
+        total_jinian = sum([max(1, n['years']) for n in self.emperor_nianhaos])
         self.listjson.append({
             "id": self.emperor_id,
             "name": self.emperor,
-            "nianhao": self.yearNumber,
+            "nianhao": nianhaos_str,
             "age": self.emperor_age,
-            "jinian": self.jinian,
+            "jinian": total_jinian,
             "miaohao": self.miaohao,
             "shihao": self.shihao,
             "ab": self.emperor_ab,
             "verdict": self.verdict
         })
 
-    def gamemin_emperor_new(self):
+    def setup_new_emperor(self):
         self.dynasty_hp -= 2
         if self.dynasty_hp <= 0:
             self.dynasty_hp = 1
@@ -649,15 +663,18 @@ class DynastyApp(QMainWindow):
 
         self.total_amuse = 1
         self.total_hardworking = 1
+        self.emperor_nianhaos = [{"name": self.yearNumber, "years": 0}]
         self.initial_dynasty_hp = self.dynasty_hp
 
     def gamemin_dynasty_change(self):
+        nianhaos_str = "、".join([f"{n['name']}({max(1, n['years'])}年)" for n in self.emperor_nianhaos])
+        total_jinian = sum([max(1, n['years']) for n in self.emperor_nianhaos])
         self.listjson.append({
             "id": self.emperor_id,
             "name": self.emperor,
-            "nianhao": self.yearNumber,
+            "nianhao": nianhaos_str,
             "age": self.emperor_age,
-            "jinian": self.jinian,
+            "jinian": total_jinian,
             "miaohao": self.miaohao,
             "shihao": self.shihao,
             "ab": self.emperor_ab,
@@ -686,7 +703,7 @@ class DynastyApp(QMainWindow):
     def dio(self):
         self.emperor_die = False
         self.new_emp_dialog.accept()
-        self.gamemin_emperor_new()
+        self.setup_new_emperor()
         self.emperor_id += 1
         self.ongame = True
         self.update_ui()
@@ -843,6 +860,7 @@ class DynastyApp(QMainWindow):
         if abs(self.data_dynasty_hp_change) >= 5 and random.random() < 0.2:
             self.yearNumber = self.get_unique_nianhao()
             self.used_nianhao.append(self.yearNumber)
+            self.emperor_nianhaos.append({"name": self.yearNumber, "years": 0})
             self.jinian = 0  # will be incremented to 1 next tick
             change_event = {"time": self.d_time, "event": f"皇帝为祈福/应天象，改元 {self.yearNumber}。"}
             self.event_happened.append(change_event)
@@ -916,6 +934,10 @@ class DynastyApp(QMainWindow):
             self.family_table.setItem(row, 2, QTableWidgetItem(member.title_full))
             status = "在世" if member.alive else "已故"
             self.family_table.setItem(row, 3, QTableWidgetItem(status))
+            father_name = ""
+            if member.father_id != 0 and member.father_id in self.royal_family:
+                father_name = self.royal_family[member.father_id].name
+            self.family_table.setItem(row, 4, QTableWidgetItem(father_name))
             row += 1
 
     def show_new_emp_dialog(self):
@@ -1062,8 +1084,8 @@ class DynastyApp(QMainWindow):
         self.tab4 = QWidget()
         tab4_layout = QVBoxLayout()
         self.family_table = QTableWidget()
-        self.family_table.setColumnCount(4)
-        self.family_table.setHorizontalHeaderLabels(["名字", "年龄", "爵位", "状态"])
+        self.family_table.setColumnCount(5)
+        self.family_table.setHorizontalHeaderLabels(["名字", "年龄", "爵位", "状态", "父亲"])
         self.family_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         tab4_layout.addWidget(self.family_table)
         self.tab4.setLayout(tab4_layout)
