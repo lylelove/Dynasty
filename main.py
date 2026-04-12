@@ -204,20 +204,25 @@ class DynastyApp(QMainWindow):
         self.emperor_miaohao_founders = ["高祖", "太祖", "世祖"]
         self.emperor_miaohao_prosperous = ["太宗", "玄宗", "宪宗", "宣宗", "肃宗", "德宗", "睿宗", "中宗"]
         self.emperor_miaohao_stable = ["顺宗", "代宗", "敬宗", "文宗", "穆宗", "懿宗", "僖宗"]
-        self.emperor_miaohao_decline = ["哀宗", "昭宗", "恭宗", "废帝"]
-        self.emperor_shihao_positive = ["文武大圣大广孝", "神文圣武", "应天顺时", "睿文孝德", "文明武德", "元圣昭献", "大圣大明", "钦明文思"]
-        self.emperor_shihao_neutral = ["恭仁顺德", "温文懿恭", "昭仁广孝", "恭俭庄靖", "宽仁恭惠", "孝和庄宪", "安恭景让"]
-        self.emperor_shihao_negative = ["恭哀", "思", "悼", "哀", "愍", "厉", "灵"]
+        self.emperor_miaohao_decline = ["哀宗", "昭宗", "恭宗", "襄宗"]
+        self.emperor_shifa_core_good = ["文", "武", "成", "宣", "景", "睿", "仁", "明"]
+        self.emperor_shifa_core_mid = ["恭", "顺", "穆", "定", "安", "和", "平", "简"]
+        self.emperor_shifa_core_bad = ["悼", "思", "哀", "愍", "厉", "灵", "炀", "幽"]
+        self.emperor_shifa_assist_good = ["孝", "德", "昭", "肃", "宪"]
+        self.emperor_shifa_assist_mid = ["恭", "顺", "庄", "静", "和"]
+        self.emperor_shifa_assist_bad = ["昏", "荒", "厉", "悖", "悼"]
         self.empress_shihao_good = ["文德", "昭德", "懿德", "恭顺", "贞顺", "元贞", "柔明", "贤肃", "庄宪", "敬慎"]
         self.empress_shihao_neutral = ["和仪", "恭静", "顺成", "端和", "淑慎", "庄静", "肃恭"]
         self.empress_shihao_bad = ["哀思", "悼恭", "思顺", "愍和"]
         self.taizi_shihao_good = ["懿德", "章怀", "恭仁", "孝敬", "宣懿", "忠肃", "惠昭"]
         self.taizi_shihao_neutral = ["庄", "昭", "敬", "恭", "思", "悼", "怀"]
+        self.taizi_shihao_bad = ["悼", "愍", "哀", "厉"]
         self.prince_shihao_good = ["恭", "靖", "康", "宪", "敬", "庄", "孝", "忠", "惠", "安"]
         self.prince_shihao_neutral = ["思", "悼", "怀", "顺", "简", "和", "恪"]
         self.prince_shihao_bad = ["哀", "愍", "厉", "灵"]
         self.princess_shihao_good = ["贤", "懿", "淑", "庄", "静", "昭", "宁", "柔", "顺"]
         self.princess_shihao_neutral = ["悼", "思", "怀", "恭", "惠", "安"]
+        self.princess_shihao_bad = ["悼", "哀", "愍"]
 
         self.reset_tang_pools()
 
@@ -591,32 +596,68 @@ class DynastyApp(QMainWindow):
         if person.is_heir:
             father = self.get_person_by_id(person.father_id)
             if father and father.title_name and father.title_rank <= 5:
-                return f"{father.title_name}世子"
+                return f"{father.title_name}{self.get_heir_posthumous_suffix(father)}"
         return ""
 
     def get_heir_posthumous_suffix(self, father):
-        if father and father.title_rank <= 5:
-            return "世子"
+        if father:
+            suffix_map = {
+                1: "王世子",
+                2: "郡王世子",
+                3: "国公世子",
+                4: "郡公世子",
+                5: "县公世子",
+            }
+            if father.id == self.current_emperor_pid:
+                return "皇太子"
+            if father.title_rank in suffix_map:
+                return suffix_map[father.title_rank]
         return "世子"
 
     def choose_family_posthumous_word(self, person):
+        # Family posthumous naming uses more than ability:
+        # age, succession status, lineage continuity and reign climate all affect tone.
+        context_score = person.ability
+        if person.age >= 60:
+            context_score += 2
+        elif person.age < 20:
+            context_score -= 2
+
+        if person.has_title:
+            context_score += 1
+        if person.is_heir:
+            context_score += 1
+        if person.extinct:
+            context_score -= 2
+        if person.title_rank in [1, 2]:
+            context_score += 1
+
+        if person.death_year == self.year and self.data_dynasty_hp_change <= -5:
+            context_score -= 2
+        if self.dynasty_hp < 25:
+            context_score -= 1
+
         if person.age < 8:
             return random.choice(["殇", "悼"])
         if person.title == "皇后":
-            pool = self.empress_shihao_good if person.ability >= 7 else self.empress_shihao_neutral
-            if person.ability <= 3:
+            pool = self.empress_shihao_good if context_score >= 8 else self.empress_shihao_neutral
+            if context_score <= 3:
                 pool = self.empress_shihao_bad
             return random.choice(pool)
         if person.title == "太子":
-            pool = self.taizi_shihao_good if person.ability >= 7 else self.taizi_shihao_neutral
+            pool = self.taizi_shihao_good if context_score >= 8 else self.taizi_shihao_neutral
+            if context_score <= 3:
+                pool = self.taizi_shihao_bad
             return random.choice(pool)
         if person.title in ["公主", "郡主", "县主", "乡主"]:
-            pool = self.princess_shihao_good if person.ability >= 7 else self.princess_shihao_neutral
+            pool = self.princess_shihao_good if context_score >= 8 else self.princess_shihao_neutral
+            if context_score <= 3:
+                pool = self.princess_shihao_bad
             return random.choice(pool)
 
-        if person.ability >= 8:
+        if context_score >= 8:
             return random.choice(self.prince_shihao_good)
-        if person.ability >= 4:
+        if context_score >= 4:
             return random.choice(self.prince_shihao_neutral)
         return random.choice(self.prince_shihao_bad)
 
@@ -636,9 +677,10 @@ class DynastyApp(QMainWindow):
             return f"{person.title_name}{chosen_shihao}{self.get_rank_suffix(person.title_rank)}"
         if person.is_heir:
             father = self.get_person_by_id(person.father_id)
+            suffix = self.get_heir_posthumous_suffix(father)
             if father and father.title_name:
-                return f"{father.title_name}{chosen_shihao}{self.get_heir_posthumous_suffix(father)}"
-            return f"{chosen_shihao}世子"
+                return f"{father.title_name}{chosen_shihao}{suffix}"
+            return f"{chosen_shihao}{suffix}"
         return ""
 
     def gamemin_family_shihao_titles(self):
@@ -766,7 +808,8 @@ class DynastyApp(QMainWindow):
     def update_heirs(self):
         # Ensure every noble or emperor designates their eldest living son as heir
         for p in self.people:
-            if p.is_alive and p.gender == "M" and (p.has_title or p.id == self.current_emperor_pid):
+            is_current_emperor = (p.id == self.current_emperor_pid)
+            if p.gender == "M" and ((p.is_alive and p.has_title) or is_current_emperor):
                 # Find current heir
                 current_heir = None
                 eldest_living_son = None
@@ -952,34 +995,45 @@ class DynastyApp(QMainWindow):
 
         self.used_miaohao.append(self.miaohao)
 
-        if performance_score >= 10:
-            base_pool = self.emperor_shihao_positive
-            endings = ["皇帝", "大圣皇帝", "大弘孝皇帝"]
-        elif performance_score >= 3:
-            base_pool = self.emperor_shihao_neutral
-            endings = ["皇帝"]
+        if performance_score >= 12:
+            core_pool = self.emperor_shifa_core_good
+            assist_pool = self.emperor_shifa_assist_good
+        elif performance_score >= 5:
+            core_pool = self.emperor_shifa_core_mid
+            assist_pool = self.emperor_shifa_assist_mid
         else:
-            base_pool = self.emperor_shihao_negative
-            endings = ["皇帝"]
+            core_pool = self.emperor_shifa_core_bad
+            assist_pool = self.emperor_shifa_assist_bad
 
-        available_shihao = []
-        for _ in range(40):
-            base = random.choice(base_pool)
-            ending = random.choice(endings)
-            candidate = base if base.endswith("帝") else f"{base}{ending}"
-            available_shihao.append(candidate)
+        candidate_pool = []
+        for _ in range(80):
+            core = random.choice(core_pool)
+            use_assist = random.random() < 0.45
+            if use_assist:
+                assist = random.choice(assist_pool)
+                if assist != core:
+                    candidate_pool.append(f"{core}{assist}皇帝")
+            candidate_pool.append(f"{core}皇帝")
+
+        # Strong reigns can occasionally receive longer celebratory styles.
+        if performance_score >= 15:
+            candidate_pool.extend([
+                "文武圣德皇帝",
+                "睿文广孝皇帝",
+                "英武景成皇帝",
+            ])
 
         unique_candidate = None
-        for candidate in available_shihao:
+        for candidate in candidate_pool:
             if candidate not in self.used_shihao:
                 unique_candidate = candidate
                 break
 
         if not unique_candidate:
-            fallback_base = "恭安" if performance_score >= 0 else "哀"
-            unique_candidate = f"{fallback_base}皇帝"
+            fallback_core = "恭" if performance_score >= 0 else "哀"
+            unique_candidate = f"{fallback_core}皇帝"
             while unique_candidate in self.used_shihao:
-                unique_candidate = f"{fallback_base}{random.choice(['文', '武', '昭', '肃'])}皇帝"
+                unique_candidate = f"{fallback_core}{random.choice(['安', '简', '昭', '悼'])}皇帝"
 
         self.used_shihao.append(unique_candidate)
         self.shihao = unique_candidate
@@ -1030,6 +1084,9 @@ class DynastyApp(QMainWindow):
                 self.emperor_ab = succ.ability
                 self.emperor_hp = succ.hp
                 succ.title = "皇帝"
+                succ.is_heir = False
+                succ.has_title = False
+                succ.title_name = ""
                 self.current_emperor_pid = succ.id
                 self.next_emperor_pid = None
             else:
