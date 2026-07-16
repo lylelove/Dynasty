@@ -5,7 +5,7 @@ from PySide6.QtWidgets import (
     QApplication, QMainWindow, QStackedWidget, QWidget, QVBoxLayout,
     QHBoxLayout, QLabel, QLineEdit, QPushButton, QFormLayout, QDialog,
     QHeaderView, QTabWidget, QTableWidget, QSlider, QTableWidgetItem,
-    QTreeWidget, QTreeWidgetItem
+    QTreeWidget, QTreeWidgetItem, QComboBox, QSplitter, QAbstractItemView
 )
 from PySide6.QtCore import Qt, QTimer
 
@@ -46,8 +46,8 @@ class Person:
 class DynastyApp(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("王朝 V0.17")
-        self.resize(920, 640)
+        self.setWindowTitle("王朝 V0.18")
+        self.resize(1000, 700)
 
         # Initialize Game State
         self.init_game_state()
@@ -112,13 +112,14 @@ class DynastyApp(QMainWindow):
         self.init_tang_resources()
         self.emperor_firstname = ""
         self.emperor_lastname = ""
+        self.zibei_poem = ""
         self.yearNumber_list = ["建元", "元光", "元朔", "元狩", "元鼎", "元封", "太初", "天汉", "太始", "征和", "后元", "始元", "元凤", "平瑞", "本始", "地节", "元康", "神爵", "五凤", "甘露", "黄龙", "初元", "永光", "建昭", "竟宁", "建始", "河平", "阳朔", "鸿嘉", "永始", "元延", "绥和", "建平", "太初元将", "元寿", "元始", "居摄", "初始", "建国", "天凤", "地皇", "更始", "建武", "建武中元", "永平", "建初", "元和", "章和", "永元", "元兴", "延平", "永初", "元初", "永宁", "建光", "延光", "永建", "阳嘉", "永和", "汉安", "建康", "永嘉", "本初", "建和", "和平", "元嘉", "永兴", "永寿", "延熹", "永康", "建宁", "熹平", "光和", "中平", "光熹", "昭宁", "微平", "初平", "兴平", "建安", "延康", "黄初", "太和", "青龙", "景初", "正始", "嘉平", "正元", "甘露", "景元", "咸熙", "泰始", "咸宁", "太康", "太熙", "永熙", "永平", "元康", "永康", "永宁", "太安", "永安", "建武", "永安", "建兴", "永嘉", "建兴", "建武", "太兴", "永昌", "太宁", "咸和", "咸康", "建元", "永和", "升平", "隆和", "兴宁", "太和", "咸安", "宁康", "太元", "隆安", "元兴", "义熙", "元熙", "开皇", "仁寿", "大业", "义宁", "武德", "贞观", "永徽", "显庆", "龙朔", "麟德", "乾封", "总章", "咸亨", "上元", "仪凤", "调露", "永隆", "开耀", "永淳", "弘道", "嗣圣", "文明", "光宅", "垂拱", "永昌", "载初", "天授", "如意", "长寿", "延载", "证圣", "天册万岁", "万岁登封", "万岁通天", "神功", "圣历", "久视", "大足", "长安", "神龙", "景龙", "唐隆", "景云", "太极", "延和", "先天", "开元", "天宝", "至德", "乾元", "上元", "宝应", "广德", "永泰", "大历", "建中", "兴元", "贞元", "永贞", "元和", "长庆", "宝历", "大和", "开成", "会昌", "大中", "咸通", "乾符", "广明", "中和", "光启", "文德", "龙纪", "大顺", "景福", "乾宁", "光化", "天复", "天祐", "建隆", "乾德", "开宝", "太平兴国", "雍熙", "端拱", "淳化", "至道", "咸平", "景德", "大中祥符", "天禧", "乾兴", "天圣", "明道", "景祐", "宝元", "康定", "庆历", "皇祐", "至和", "嘉祐", "治平", "熙宁", "元丰", "元祐", "绍圣", "元符", "建中靖国", "崇宁", "大观", "政和", "重和", "宣和", "靖康", "建炎", "绍兴", "隆兴", "乾道", "纯熙", "淳熙", "绍熙", "庆元", "嘉泰", "开禧", "开禧", "嘉定", "宝庆", "绍定", "端平", "嘉熙", "淳祐", "宝祐", "开庆", "景定", "咸淳", "德祐", "景炎", "祥兴", "中统", "至元", "元贞", "大德", "至大", "皇庆", "延祐", "至治", "泰定", "致和", "天历", "至顺", "元统", "至元", "至正", "洪武", "建文", "永乐", "洪熙", "宣德", "正统", "景泰", "天顺", "成化", "弘治", "正德", "嘉靖", "隆庆", "万历", "泰昌", "天启", "崇祯", "顺治", "康熙", "雍正", "乾隆", "嘉庆", "道光", "咸丰", "同治", "光绪", "宣统"]
         self.shihao = ""
         self.miaohao = ""
         self.used_shihao = []
         self.used_miaohao = []
         self.used_emperor_names = []
-        self.used_person_names = []
+        self.used_person_names = set()
         self.used_nianhao = []
         self.initial_dynasty_hp = 100
 
@@ -161,24 +162,132 @@ class DynastyApp(QMainWindow):
     def init_tang_resources(self):
         self.tang_surnames = [
             "李", "赵", "王", "郑", "崔", "卢", "韦", "裴", "杜", "苏", "柳", "薛", "韩", "萧", "房", "长孙",
-            "高", "杨", "郭", "窦", "徐", "宋", "孔", "颜", "陆", "贺", "沈", "岑", "元", "武", "独孤", "宇文"
+            "高", "杨", "郭", "窦", "徐", "宋", "孔", "颜", "陆", "贺", "沈", "岑", "元", "武", "独孤", "宇文",
+            "张", "刘", "陈", "周", "吴", "孙", "马", "朱", "胡", "林", "何", "罗", "梁", "谢", "唐", "许",
+            "冯", "邓", "曹", "彭", "曾", "肖", "田", "董", "袁", "潘", "于", "蒋", "蔡", "余", "杜", "叶",
+            "程", "苏", "魏", "吕", "丁", "任", "沈", "姚", "卢", "姜", "崔", "钟", "谭", "陆", "汪", "范",
+            "金", "石", "廖", "贾", "夏", "韦", "付", "方", "白", "邹", "孟", "熊", "秦", "邱", "江", "尹",
+            "薛", "闫", "段", "雷", "侯", "龙", "史", "陶", "黎", "贺", "顾", "毛", "郝", "龚", "邵", "万",
+            "钱", "严", "覃", "武", "戴", "莫", "孔", "向", "汤"
         ]
-        self.tang_male_given_single = list("承弘元思守崇景玄世重文武德宗道隆光嗣维贞从温俨倓恪璿祐祎怡俶俊俭倚侃恭昭穆桓烈毅肃靖睿哲宣显英伟雄俊豪杰轩昂昂熙茂勋业基祖宪章经纬韬略邦国天泽润溥淳熙泰恒恒嘉祯祥瑞麟凤龙云鹏鹤松柏山川河岳星辰")
+        # 去重保序
+        self.tang_surnames = list(dict.fromkeys(self.tang_surnames))
+
+        # 字辈备选诗（每字一代，宗室按代数取对应字辈）
+        self.zibei_options = [
+            "伯仲叔季孟",
+            "元亨利贞祥",
+            "德承先世泽",
+            "诗礼传家久",
+            "忠孝传家远",
+            "文武成康盛",
+            "仁义礼智信",
+            "天地玄黄宇",
+            "日月盈昃辰",
+            "永锡祚胤昌",
+            "克昌厥后光",
+            "肇启宏图业",
+            "绍继祖德长",
+            "安邦定国泰",
+            "经纶济世才",
+            "承恩沐浩荡",
+            "景运启鸿图",
+            "嘉谟昭令德",
+            "显扬先祖志",
+            "继述永绵延",
+        ]
+
+        self.tang_male_given_single = list(
+            "承弘元思守崇景玄世重文武德宗道隆光嗣维贞从温俨倓恪璿祐祎怡俶俊俭倚侃恭昭穆桓烈毅肃靖睿哲宣显"
+            "英伟雄俊豪杰轩昂熙茂勋业基祖宪章经纬韬略邦国天泽润溥淳泰恒嘉祯祥瑞麟凤龙云鹏鹤松柏山川河岳星辰"
+            "安邦定国治平修齐正诚意格致知行慎独诚明中庸和同泰来往复循环通达明智聪慧贤良俊秀英才豪杰卓荦"
+            "岐嶷聪颖颖悟豁达旷达超逸清奇古雅端方正直刚毅果敢勇猛威武雄壮豪迈潇洒飘逸俊逸清逸高逸"
+            "伯仲叔季孟仲季元亨利贞祥瑞嘉庆福寿康宁安乐太平和顺吉祥如意称心如意"
+        )
+        self.tang_male_given_single = list(dict.fromkeys(self.tang_male_given_single))
+
         self.tang_male_given_double = [
             "世民", "承乾", "泰和", "弘义", "弘礼", "弘道", "崇义", "崇礼", "景行", "景仁", "玄成", "守礼",
             "元嘉", "元礼", "宗仪", "宗楚", "德明", "德昭", "道玄", "道兴", "维岳", "从善", "承业", "承礼",
             "弘文", "弘武", "思恭", "思敬", "守正", "守谦", "景让", "景初", "玄晖", "重润", "重茂", "光弼",
             "孝瑜", "孝珩", "孝瓘", "孝琬", "孝瓒", "子建", "子敬", "子渊", "叔宝", "叔慎", "仲卿", "少游",
             "怀仁", "怀义", "怀智", "怀玉", "怀瑾", "明远", "明哲", "明允", "明达", "德裕", "德懋", "德音",
-            "文谦", "文炳", "文蔚", "武韬", "武略", "承恩", "承泽", "承宣", "显达", "显宗", "昭嗣", "昭烈"
+            "文谦", "文炳", "文蔚", "武韬", "武略", "承恩", "承泽", "承宣", "显达", "显宗", "昭嗣", "昭烈",
+            "伯温", "仲淹", "叔夜", "季鹰", "孟德", "元直", "亨利", "贞固", "祥符", "嘉言", "庆余", "福臻",
+            "寿昌", "康成", "宁远", "安邦", "乐天", "太平", "和靖", "顺之", "吉甫", "如晦", "称意", "如意",
+            "安民", "定国", "治平", "修身", "齐家", "正心", "诚意", "格物", "致知", "力行", "慎独", "诚明",
+            "中和", "同德", "泰来", "往哲", "复礼", "循环", "通明", "达道", "明智", "聪达", "慧远", "贤达",
+            "良弼", "俊臣", "秀实", "英才", "豪杰", "卓立", "岐嶷", "聪颖", "颖悟", "豁达", "旷达", "超逸",
+            "清奇", "古雅", "端方", "正直", "刚毅", "果敢", "勇毅", "威武", "雄壮", "豪迈", "潇洒", "飘逸",
+            "俊逸", "清逸", "高逸", "伯通", "仲达", "叔平", "季常", "孟起", "元凯", "亨嘉", "利见", "贞元",
+            "祥云", "嘉谟", "庆云", "福海", "寿山", "康泰", "宁谧", "安澜", "乐善", "太初", "和光", "顺天",
+            "吉光", "如松", "称德", "如玉", "安世", "定远", "治本", "修德", "齐物", "正己", "诚中", "格非",
+            "致远", "力行", "慎思", "诚一", "中正", "同仁", "泰运", "往复", "复初", "循理", "通达", "达观",
+            "明允", "聪察", "慧心", "贤明", "良工", "俊乂", "秀出", "英杰", "豪英", "卓尔", "岐阳", "聪敏",
+            "颖脱", "豁然", "旷世", "超群", "清俊", "古风", "端庄", "正大", "刚健", "果断", "勇武", "威烈",
+            "雄飞", "豪气", "潇洒", "飘然", "俊采", "清扬", "高远", "伯起", "仲宣", "叔夜", "季真", "孟坚",
+            "元亮", "亨通", "利贞", "贞吉", "祥瑞", "嘉庆", "庆善", "福禄", "寿考", "康宁", "宁一", "安居",
+            "乐业", "太和", "和合", "顺理", "吉庆", "如愿", "称心", "如意", "安邦", "定鼎", "治国", "修齐",
+            "齐治", "正心", "诚意", "格致", "致知", "力本", "慎始", "诚终", "中庸", "同归", "泰极", "往圣",
+            "复性", "循道", "通变", "达权", "明德", "聪睿", "慧眼", "贤良", "良史", "俊秀", "秀才", "英华",
+            "豪迈", "卓识", "岐山", "聪达", "颖慧", "豁达", "旷远", "超凡", "清朗", "古意", "端雅", "正道",
+            "刚强", "果决", "勇猛", "威严", "雄才", "豪放", "潇洒", "飘逸", "俊杰", "清流", "高明", "伯玉",
+            "仲尼", "叔齐", "季札", "孟轲", "元稹", "亨衢", "利涉", "贞固", "祥和", "嘉会", "庆成", "福田",
+            "寿元", "康强", "宁远", "安泰", "乐土", "太虚", "和风", "顺水", "吉人", "如春", "称扬", "如兰",
         ]
-        self.tang_female_given_single = list("婉令宜安永宁和柔华真玉仙德丽贞淑静惠昭义清嘉盈瑶璧珂珊珠琦琴书画画诗韵兰菊梅莲蓉萱蕊珍瑶环佩莺燕娥娟娥姬嫱")
+        self.tang_male_given_double = list(dict.fromkeys(self.tang_male_given_double))
+
+        # 字辈后接的名用字（与字辈组合成双名）
+        self.zibei_name_chars_male = list(
+            "文德武功成康安邦定国治平修齐正诚意格致知行慎独诚明中庸和同泰来往复循环通达明智聪慧贤良俊秀"
+            "英才豪杰卓立岐嶷聪颖颖悟豁达旷达超逸清奇古雅端方正直刚毅果敢勇猛威武雄壮豪迈潇洒飘逸俊逸"
+            "清逸高逸仁义礼智信忠孝廉耻勇温良恭俭让谦恭和顺嘉祥瑞庆福寿康宁安乐太平和顺吉祥如意"
+            "元亨利贞祥瑞嘉庆福寿康宁安乐太平和顺吉祥伯仲叔季孟景玄世重承弘思守崇光嗣维贞从温俨"
+            "恪祐祎怡俶俊俭倚侃恭昭穆桓烈毅肃靖睿哲宣显英伟雄俊豪杰轩昂熙茂勋业基祖宪章经纬韬略"
+            "邦国天泽润溥淳泰恒嘉祯祥瑞麟凤龙云鹏鹤松柏山川河岳星辰"
+        )
+        self.zibei_name_chars_male = list(dict.fromkeys(self.zibei_name_chars_male))
+
+        self.zibei_name_chars_female = list(
+            "婉令宜安永宁和柔华真玉仙德丽贞淑静惠昭义清嘉盈瑶璧珂珊珠琦琴书画诗韵兰菊梅莲蓉萱蕊珍"
+            "环佩莺燕娥娟姬嫱芳菲妍姿容仪端庄贤惠慈爱温婉娴静雅致清丽秀美艳丽娇媚妩媚窈窕婀娜"
+            "婷婷袅袅翩翩翩跹灵秀慧黠聪慧颖慧慧心慧质兰心蕙质冰清玉洁花容月貌国色天香倾国倾城"
+            "沉鱼落雁闭月羞花如花似玉出水芙蓉亭亭玉立楚楚动人楚楚可怜楚楚可人楚楚有致"
+        )
+        self.zibei_name_chars_female = list(dict.fromkeys(self.zibei_name_chars_female))
+
+        self.tang_female_given_single = list(
+            "婉令宜安永宁和柔华真玉仙德丽贞淑静惠昭义清嘉盈瑶璧珂珊珠琦琴书画诗韵兰菊梅莲蓉萱蕊珍"
+            "环佩莺燕娥娟姬嫱芳菲妍姿容仪端庄贤惠慈爱温婉娴静雅致清丽秀美艳丽娇媚妩媚窈窕婀娜"
+            "婷婷袅袅翩翩灵秀慧黠聪慧颖慧冰清玉洁花容月貌国色天香倾国倾城沉鱼落雁闭月羞花"
+            "如花似玉出水芙蓉亭亭玉立楚楚动人楚楚可怜楚楚可人楚楚有致"
+        )
+        self.tang_female_given_single = list(dict.fromkeys(self.tang_female_given_single))
+
         self.tang_female_given_double = [
             "太平", "安乐", "长宁", "金仙", "玉真", "万春", "永宁", "宁国", "和政", "寿安", "新都", "广德",
             "临川", "襄城", "豫章", "巴陵", "普安", "清河", "常乐", "永嘉", "义阳", "定安", "乐安", "咸宜",
             "延庆", "永泰", "安兴", "金城", "宜芳", "怀思", "晋安", "临晋", "普康", "乐城", "新平", "寿光",
-            "永穆", "永清", "成安", "广宁", "丹阳", "永昌", "升平", "寿昌", "南康", "建宁", "遂安", "始安"
+            "永穆", "永清", "成安", "广宁", "丹阳", "永昌", "升平", "寿昌", "南康", "建宁", "遂安", "始安",
+            "清河", "兰陵", "弘农", "颍川", "安定", "河东", "平原", "东阳", "义兴", "临海", "义宁", "会稽",
+            "万寿", "寿光", "安乐", "永宁", "南康", "永兴", "永康", "永平", "嘉兴", "建宁", "益昌", "遂安",
+            "始安", "永明", "绥安", "安庆", "广宁", "华容", "寻阳", "庐陵", "豫章", "长沙", "桂阳", "衡阳",
+            "零陵", "营阳", "汝南", "南郡", "江夏", "魏兴", "广汉", "新都", "宜都", "建平", "永安", "西平",
+            "武威", "张掖", "酒泉", "敦煌", "西海", "晋昌", "高昌", "交趾", "日南", "九真", "婉清", "令仪",
+            "宜人", "安然", "永安", "宁馨", "和美", "柔嘉", "华清", "真如", "玉华", "仙姿", "德馨", "丽质",
+            "贞静", "淑德", "静婉", "惠心", "昭华", "义安", "清扬", "嘉美", "盈盈", "瑶华", "璧人", "珂月",
+            "珊珊", "珠玑", "琦玮", "琴心", "书香", "画眉", "诗意", "韵致", "兰心", "菊隐", "梅香", "莲心",
+            "蓉裳", "萱草", "蕊珠", "珍重", "环佩", "莺啼", "燕语", "娥眉", "娟好", "姬姜", "嫱媛", "芳菲",
+            "妍姿", "容华", "仪态", "端庄", "贤淑", "惠质", "慈心", "爱莲", "温婉", "娴雅", "静美", "雅致",
+            "清丽", "秀美", "艳色", "娇容", "媚丽", "窈窕", "婀娜", "婷婷", "袅袅", "翩翩", "灵秀", "慧心",
+            "聪慧", "颖慧", "冰清", "玉洁", "花容", "月貌", "国色", "天香", "倾国", "倾城", "沉鱼", "落雁",
+            "闭月", "羞花", "如花", "似玉", "出水", "芙蓉", "亭亭", "玉立", "楚楚", "动人", "可怜", "可人",
+            "有致", "婉约", "令德", "宜室", "安好", "永嘉", "宁静", "和顺", "柔顺", "华贵", "真善", "玉成",
+            "仙姿", "德音", "丽人", "贞一", "淑慎", "静好", "惠爱", "昭明", "义方", "清芬", "嘉言", "盈月",
+            "瑶台", "璧合", "珂雪", "珊枝", "珠圆", "琦丽", "琴瑟", "书卷", "画屏", "诗情", "韵事", "兰质",
+            "菊香", "梅韵", "莲步", "蓉华", "萱堂", "蕊心", "珍爱", "环佩", "莺声", "燕燕", "娥娥", "娟娟",
         ]
+        self.tang_female_given_double = list(dict.fromkeys(self.tang_female_given_double))
         self.emperor_firstname_list = "".join(self.tang_surnames)
 
         self.rank_suffix_map = {
@@ -558,6 +667,17 @@ class DynastyApp(QMainWindow):
         year_number_layout.addWidget(self.year_number_btn)
         form_layout.addRow("年号:", year_number_layout)
 
+        # 字辈：下拉备选 + 可手改 + 刷新随机
+        self.zibei_combo = QComboBox()
+        self.zibei_combo.setEditable(True)
+        self.zibei_combo.addItems(self.zibei_options)
+        self.zibei_combo.setCurrentIndex(0)
+        self.zibei_btn = QPushButton("刷新")
+        zibei_layout = QHBoxLayout()
+        zibei_layout.addWidget(self.zibei_combo)
+        zibei_layout.addWidget(self.zibei_btn)
+        form_layout.addRow("字辈:", zibei_layout)
+
         layout.addLayout(form_layout)
 
         # Start Button
@@ -569,12 +689,14 @@ class DynastyApp(QMainWindow):
         self.dynasty_btn.clicked.connect(self.dynasty_change_name)
         self.emperor_btn.clicked.connect(self.emperor_change_name)
         self.year_number_btn.clicked.connect(self.yearNumber_change_name)
+        self.zibei_btn.clicked.connect(self.zibei_change_poem)
         self.start_btn.clicked.connect(self.start_game_from_ui)
 
     def start_game_from_ui(self):
         self.dynasty = self.dynasty_input.text()
         self.emperor = self.emperor_input.text()
         self.yearNumber = self.year_number_input.text()
+        self.zibei_poem = self.zibei_combo.currentText().strip() or self.zibei_options[0]
         self.gamestart()
 
     def achange(self, value):
@@ -745,12 +867,90 @@ class DynastyApp(QMainWindow):
             return person.title_name
         return "未封"
 
+    def get_rank_label(self, rank):
+        if rank == 0:
+            return "帝室"
+        return self.rank_suffix_map.get(rank, "爵")
+
+    def format_person_year(self, person):
+        if person.death_year >= 0:
+            return f"{person.birth_year}—{person.death_year}"
+        return f"{person.birth_year}—"
+
+    def get_father_name(self, person):
+        if person.father_id is None:
+            return "—"
+        father = self.get_person_by_id(person.father_id)
+        return father.name if father else "—"
+
+    def get_spouse_name(self, person):
+        spouse_id = getattr(person, "spouse_id", None)
+        if spouse_id is None:
+            return "—"
+        spouse = self.get_person_by_id(spouse_id)
+        return spouse.name if spouse else "—"
+
+    def get_children_summary(self, person):
+        names = []
+        for cid in person.children:
+            child = self.get_person_by_id(cid)
+            if child:
+                tag = "子" if child.gender == "M" else "女"
+                names.append(f"{child.name}（{tag}）")
+        return "、".join(names) if names else "无"
+
+    def collect_fiefs(self):
+        """汇总现存/历史封国：有 title_name 的男系宗室按封国名聚合。"""
+        fiefs = {}
+        for p in self.people:
+            if p.gender != "M" or not p.title_name:
+                continue
+            key = p.title_name
+            entry = fiefs.setdefault(key, {
+                "name": key,
+                "rank": p.title_rank,
+                "holders": [],
+                "current": None,
+            })
+            entry["holders"].append(p)
+            if p.title_rank and (entry["rank"] == 0 or p.title_rank < entry["rank"]):
+                entry["rank"] = p.title_rank
+            if p.is_alive and p.has_title:
+                if entry["current"] is None or p.age > entry["current"].age:
+                    entry["current"] = p
+        # 当前持有者优先用 has_title 者；否则取该国在世最长者
+        for entry in fiefs.values():
+            if entry["current"] is None:
+                living = [h for h in entry["holders"] if h.is_alive]
+                if living:
+                    living.sort(key=lambda x: (-x.has_title, x.birth_year, x.id))
+                    entry["current"] = living[0]
+            entry["holders"].sort(key=lambda x: (x.birth_year, x.id))
+            entry["alive_count"] = sum(1 for h in entry["holders"] if h.is_alive)
+            entry["total_count"] = len(entry["holders"])
+            entry["extinct"] = entry["alive_count"] == 0
+        result = list(fiefs.values())
+        result.sort(key=lambda e: (
+            0 if not e["extinct"] else 1,
+            e["rank"] or 9,
+            e["name"],
+        ))
+        return result
+
+    def find_fief_lineage_root(self, fief_name):
+        """封国世系根：该封号最早受封者（出生最早且曾持有该封号）。"""
+        holders = [p for p in self.people if p.gender == "M" and p.title_name == fief_name]
+        if not holders:
+            return None
+        holders.sort(key=lambda p: (p.birth_year, p.id))
+        return holders[0]
+
     def is_name_used(self, name):
         return name in self.used_person_names or name in self.used_emperor_names
 
     def register_person_name(self, name):
-        if name and name not in self.used_person_names:
-            self.used_person_names.append(name)
+        if name:
+            self.used_person_names.add(name)
 
     def choose_dynasty_surname(self):
         self.emperor_firstname = random.choice(self.tang_surnames)
@@ -762,13 +962,41 @@ class DynastyApp(QMainWindow):
                 return surname
         return full_name[0] if full_name else ""
 
-    def generate_given_name(self, gender):
+    def get_zibei_char(self, generation):
+        """按代数取字辈：第1代用诗首字，第2代用第2字……超出则循环。"""
+        poem = self.zibei_poem or (self.zibei_options[0] if self.zibei_options else "元亨利贞祥")
+        if not poem:
+            return "元"
+        idx = max(0, int(generation) - 1) % len(poem)
+        return poem[idx]
+
+    def generate_given_name(self, gender, generation=None, use_zibei=True):
+        """生成名。宗室（use_zibei=True 且有代数）按字辈取名；外戚/配偶不强制字辈。"""
+        if use_zibei and generation is not None and self.zibei_poem:
+            zibei = self.get_zibei_char(generation)
+            if gender == "M":
+                # 双名为主：字辈 + 名用字；少量单名用字辈本身
+                if random.random() < 0.12:
+                    return zibei
+                second = random.choice(self.zibei_name_chars_male)
+                # 避免字辈与第二字相同
+                if second == zibei and len(self.zibei_name_chars_male) > 1:
+                    second = random.choice([c for c in self.zibei_name_chars_male if c != zibei])
+                return zibei + second
+            # 女性宗室亦用字辈，第二字取女用字
+            if random.random() < 0.12:
+                return zibei
+            second = random.choice(self.zibei_name_chars_female)
+            if second == zibei and len(self.zibei_name_chars_female) > 1:
+                second = random.choice([c for c in self.zibei_name_chars_female if c != zibei])
+            return zibei + second
+
         if gender == "M":
-            if random.random() < 0.45:
+            if random.random() < 0.35:
                 return random.choice(self.tang_male_given_single)
             return random.choice(self.tang_male_given_double)
 
-        if random.random() < 0.45:
+        if random.random() < 0.35:
             return random.choice(self.tang_female_given_single)
         return random.choice(self.tang_female_given_double)
 
@@ -780,19 +1008,32 @@ class DynastyApp(QMainWindow):
         frags = random.sample(pool, 2)
         return "".join(frags) + "皇帝"
 
-    def generate_full_name(self, gender, surname=None):
+    def generate_full_name(self, gender, surname=None, generation=None, use_zibei=True):
         family_name = surname if surname else random.choice(self.tang_surnames)
         attempts = 0
-        while attempts < 200:
-            given_name = self.generate_given_name(gender)
+        max_attempts = 800
+        while attempts < max_attempts:
+            given_name = self.generate_given_name(gender, generation=generation, use_zibei=use_zibei)
             candidate = family_name + given_name
             if not self.is_name_used(candidate):
                 return candidate
             attempts += 1
 
+        # 字辈库耗尽时：字辈 + 随机双字，再不行加数字后缀
+        zibei = self.get_zibei_char(generation) if (use_zibei and generation is not None) else ""
+        for _ in range(400):
+            if gender == "M":
+                tail = random.choice(self.zibei_name_chars_male) + random.choice(self.zibei_name_chars_male)
+            else:
+                tail = random.choice(self.zibei_name_chars_female) + random.choice(self.zibei_name_chars_female)
+            candidate = family_name + (zibei + tail if zibei else tail)
+            if not self.is_name_used(candidate):
+                return candidate
+
         suffix = 1
         while True:
-            candidate = f"{family_name}{self.generate_given_name(gender)}{suffix}"
+            given_name = self.generate_given_name(gender, generation=generation, use_zibei=use_zibei)
+            candidate = f"{family_name}{given_name}{suffix}"
             if not self.is_name_used(candidate):
                 return candidate
             suffix += 1
@@ -955,15 +1196,11 @@ class DynastyApp(QMainWindow):
                 if not p.shihao and (p.has_title or p.is_heir or p.title in ["太子", "皇后", "公主", "郡主", "县主", "乡主"]):
                     p.shihao = self.build_family_posthumous_title(p)
 
-                # Title Inheritance Logic
+                # Title Inheritance Logic（嫡长：含代位继承）
                 if p.gender == "M" and p.has_title:
-                    # Find heir to pass the title to
-                    heir = None
-                    for child_id in p.children:
-                        child = self.get_person_by_id(child_id)
-                        if child and child.is_alive and child.is_heir:
-                            heir = child
-                            break
+                    heir = self.find_heir_of_line(p)
+                    if heir and heir.id == p.id:
+                        heir = None
 
                     if heir:
                         heir.title_name = p.title_name
@@ -996,8 +1233,13 @@ class DynastyApp(QMainWindow):
                                 self.available_title_pools.setdefault(p.title_rank, []).append(p.title_name)
                                 p.has_title = False
 
-    def get_random_name(self, gender):
-        name = self.generate_full_name(gender, surname=self.emperor_firstname)
+    def get_random_name(self, gender, generation=None):
+        name = self.generate_full_name(
+            gender,
+            surname=self.emperor_firstname,
+            generation=generation,
+            use_zibei=True,
+        )
         self.register_person_name(name)
         return name
 
@@ -1006,8 +1248,9 @@ class DynastyApp(QMainWindow):
             return
 
         gender = force_gender if force_gender else random.choice(["M", "F"])
-        child_name = self.get_random_name(gender)
-        child = Person(self.next_pid, child_name, gender, self.year, father.id, None, father.generation + 1)
+        child_gen = father.generation + 1
+        child_name = self.get_random_name(gender, generation=child_gen)
+        child = Person(self.next_pid, child_name, gender, self.year, father.id, None, child_gen)
 
         if gender == "M":
             child.title_rank = child_rank
@@ -1044,7 +1287,8 @@ class DynastyApp(QMainWindow):
             if p.age >= 16 and not p.is_married:
                 if random.random() < 0.2:
                     p.is_married = True
-                    spouse_name = self.generate_full_name("F")
+                    # 外姓配偶不按本族字辈
+                    spouse_name = self.generate_full_name("F", use_zibei=False)
                     self.register_person_name(spouse_name)
                     spouse = Person(self.next_pid, spouse_name, "F", self.year - p.age + random.randint(-5, 2), None, None, p.generation)
                     spouse.age = p.age - random.randint(-2, 5)
@@ -1079,82 +1323,147 @@ class DynastyApp(QMainWindow):
                     if is_emperor and random.random() < 0.2:
                         self.try_spawn_child(p, 1)
 
+    def get_sons_by_birth(self, person, alive_only=True):
+        """嫡长序：按出生年、再按 id（同年出生先生成者为长）。"""
+        sons = []
+        for child_id in person.children:
+            child = self.get_person_by_id(child_id)
+            if child and child.gender == "M":
+                if alive_only and not child.is_alive:
+                    continue
+                sons.append(child)
+        sons.sort(key=lambda c: (c.birth_year, c.id))
+        return sons
+
+    def get_eldest_living_son(self, person):
+        sons = self.get_sons_by_birth(person, alive_only=True)
+        return sons[0] if sons else None
+
+    def find_heir_of_line(self, person):
+        """
+        嫡长子继承（含代位继承）：
+        诸子按出生序；长子在则长子继；长子已故则长子之长子（孙）代位，以此类推。
+        """
+        for son in self.get_sons_by_birth(person, alive_only=False):
+            if son.is_alive:
+                return son
+            heir = self.find_heir_of_line(son)
+            if heir:
+                return heir
+        return None
+
     def update_heirs(self):
-        # Ensure every noble or emperor designates their eldest living son as heir
+        # 每位有爵/皇帝：嫡长子（在世诸子中出生最早者）为世子
         for p in self.people:
             is_current_emperor = (p.id == self.current_emperor_pid)
             if p.gender == "M" and ((p.is_alive and p.has_title) or is_current_emperor):
-                # Find current heir
-                current_heir = None
-                eldest_living_son = None
-
+                rightful = self.get_eldest_living_son(p)
                 for child_id in p.children:
                     child = self.get_person_by_id(child_id)
                     if child and child.gender == "M":
-                        if child.is_alive:
-                            if eldest_living_son is None or child.age > eldest_living_son.age:
-                                eldest_living_son = child
-                        if child.is_heir:
-                            current_heir = child
-
-                # If current heir is dead or not eldest, reassign
-                if eldest_living_son:
-                    if current_heir and current_heir.id != eldest_living_son.id:
-                        current_heir.is_heir = False
-                    eldest_living_son.is_heir = True
+                        child.is_heir = bool(rightful and child.id == rightful.id)
 
     def update_crown_prince(self):
         self.update_heirs()
+        self.next_emperor_pid = None
 
-        # Find if there is already a Crown Prince
-        has_taizi = False
+        emp = self.get_person_by_id(self.current_emperor_pid) if self.current_emperor_pid else None
+        if not emp:
+            return
+
+        # 储君 = 皇帝嫡长子（在世诸子中出生最早者）；若长子已故则由长子一系代位
+        rightful = self.find_heir_of_line(emp)
+
+        # 撤去非正统的「太子」头衔
         for p in self.people:
             if p.is_alive and p.title == "太子":
-                has_taizi = True
-                self.next_emperor_pid = p.id
-                break
+                if not rightful or p.id != rightful.id:
+                    p.title = ""
+                    p.title = self.format_alive_title(p)
 
-        if not has_taizi and self.current_emperor_pid:
-            emp = self.get_person_by_id(self.current_emperor_pid)
-            if emp:
-                # Find eldest living male son (should be the designated heir)
-                for child_id in emp.children:
-                    child = self.get_person_by_id(child_id)
-                    if child and child.is_alive and child.is_heir:
-                        # Reclaim any title the heir had
-                        if child.title_name and child.has_title:
-                            self.available_title_pools.setdefault(child.title_rank, []).append(child.title_name)
-                            child.has_title = False
+        if not rightful or not rightful.is_alive:
+            return
 
-                        child.title = "太子"
-                        self.next_emperor_pid = child.id
-                        break
+        # 太子收回私封，专任储君
+        if rightful.title_name and rightful.has_title:
+            self.available_title_pools.setdefault(rightful.title_rank, []).append(rightful.title_name)
+            rightful.has_title = False
+            rightful.title_name = ""
 
-    def find_collateral_successor(self):
-        # Look for the closest male relative.
-        # Strategy: find all living males, sort by generation ascending, then age descending
-        candidates = []
-        for p in self.people:
-            if p.is_alive and p.gender == "M" and p.id != self.current_emperor_pid:
-                candidates.append(p)
+        rightful.is_heir = True
+        rightful.title = "太子"
+        self.next_emperor_pid = rightful.id
 
-        if not candidates:
+    def find_collateral_successor(self, deceased):
+        """
+        无直系男嗣时：兄终弟及，再及侄；再向上寻叔伯一系。
+        严格按父系、出生顺序，不按年龄乱序挑人。
+        """
+        if not deceased:
             return None
 
-        # Sort candidates
-        candidates.sort(key=lambda x: (x.generation, -x.age))
+        # 1) 已故皇帝的男系后裔（含代位）——调用方通常已查过，此处再兜底
+        heir = self.find_heir_of_line(deceased)
+        if heir and heir.id != deceased.id:
+            return heir.id
+
+        # 2) 自本人向上：先尽诸弟及其后裔，再及更旁的兄弟支
+        current = deceased
+        visited_fathers = set()
+        while current and current.father_id is not None:
+            father = self.get_person_by_id(current.father_id)
+            if not father or father.id in visited_fathers:
+                break
+            visited_fathers.add(father.id)
+
+            brothers = self.get_sons_by_birth(father, alive_only=False)
+            # 定位 current 在兄弟中的位置，优先「弟」及其后裔（兄终弟及）
+            idx = next((i for i, b in enumerate(brothers) if b.id == current.id), None)
+            if idx is not None:
+                for bro in brothers[idx + 1:]:
+                    if bro.is_alive and bro.id != deceased.id:
+                        return bro.id
+                    line_heir = self.find_heir_of_line(bro)
+                    if line_heir and line_heir.id != deceased.id:
+                        return line_heir.id
+
+                # 诸弟绝：再看兄长一系（兄已故时其孙可继）
+                for bro in brothers[:idx]:
+                    if bro.id == deceased.id:
+                        continue
+                    if bro.is_alive:
+                        return bro.id
+                    line_heir = self.find_heir_of_line(bro)
+                    if line_heir and line_heir.id != deceased.id:
+                        return line_heir.id
+
+            current = father
+
+        # 3) 仍无：宗室在世男丁，按代数升序、同代按出生序
+        candidates = [
+            p for p in self.people
+            if p.is_alive and p.gender == "M" and p.id != deceased.id
+        ]
+        if not candidates:
+            return None
+        candidates.sort(key=lambda x: (x.generation, x.birth_year, x.id))
         return candidates[0].id
 
     def find_successor(self):
         self.update_crown_prince()
         if self.next_emperor_pid:
-            # Recheck if the prince is alive
             p = self.get_person_by_id(self.next_emperor_pid)
             if p and p.is_alive:
                 return self.next_emperor_pid
 
-        # Find collateral
-        return self.find_collateral_successor()
+        emp = self.get_person_by_id(self.current_emperor_pid) if self.current_emperor_pid else None
+        if emp:
+            # 直系嫡长（含代位）
+            heir = self.find_heir_of_line(emp)
+            if heir:
+                return heir.id
+            return self.find_collateral_successor(emp)
+        return self.find_collateral_successor(emp)
 
     def gamemin_dynasty(self):
         if self.dynasty_hp > 0:
@@ -1409,8 +1718,9 @@ class DynastyApp(QMainWindow):
         self.used_shihao = []
         self.used_miaohao = []
         self.used_emperor_names = []
-        self.used_person_names = []
+        self.used_person_names = set()
         self.used_nianhao = []
+        self.zibei_poem = ""
         self.initial_dynasty_hp = 100
 
     def dio(self):
@@ -1433,6 +1743,8 @@ class DynastyApp(QMainWindow):
         self.dynasty_input.setText("")
         self.emperor_input.setText("")
         self.year_number_input.setText("")
+        if self.zibei_options:
+            self.zibei_combo.setCurrentIndex(0)
 
         self.stacked_widget.setCurrentIndex(0)
 
@@ -1440,12 +1752,24 @@ class DynastyApp(QMainWindow):
         self.dynasty = random.choice(self.dynasty_name)
         self.dynasty_input.setText(self.dynasty)
 
+    def zibei_change_poem(self):
+        poem = random.choice(self.zibei_options)
+        idx = self.zibei_combo.findText(poem)
+        if idx >= 0:
+            self.zibei_combo.setCurrentIndex(idx)
+        else:
+            self.zibei_combo.setEditText(poem)
+        self.zibei_poem = poem
+
     def emperor_change_name(self):
         self.choose_dynasty_surname()
+        # 开国皇帝用字辈第1代
+        poem = self.zibei_combo.currentText().strip() if hasattr(self, "zibei_combo") else ""
+        self.zibei_poem = poem or (self.zibei_options[0] if self.zibei_options else "元亨利贞祥")
         while True:
-            self.emperor_lastname = self.generate_given_name("M")
+            self.emperor_lastname = self.generate_given_name("M", generation=1, use_zibei=True)
             candidate = self.emperor_firstname + self.emperor_lastname
-            if candidate not in self.used_emperor_names:
+            if candidate not in self.used_emperor_names and not self.is_name_used(candidate):
                 self.emperor = candidate
                 break
         self.emperor_input.setText(self.emperor)
@@ -1485,12 +1809,19 @@ class DynastyApp(QMainWindow):
         self.dialog_year_input.setText(self.yearNumber)
 
     def emperor_change_name_after(self):
+        # 新君改名：按继位者代数取字辈（无继位者则按当前代数+1）
+        gen = 1
+        if self.next_emperor_pid:
+            succ = self.get_person_by_id(self.next_emperor_pid)
+            if succ:
+                gen = succ.generation
         while True:
-            self.emperor_lastname = self.generate_given_name("M")
+            self.emperor_lastname = self.generate_given_name("M", generation=gen, use_zibei=True)
             candidate = self.emperor_firstname + self.emperor_lastname
-            if candidate not in self.used_emperor_names:
+            if candidate not in self.used_emperor_names and not self.is_name_used(candidate):
                 self.emperor = candidate
                 self.used_emperor_names.append(candidate)
+                self.register_person_name(candidate)
                 break
         self.dialog_emp_input.setText(self.emperor)
 
@@ -1649,6 +1980,9 @@ class DynastyApp(QMainWindow):
             # 显眼的树状图：按国别分组展示谱系
             self.update_family_tree()
 
+        # 宗藩列表
+        self.update_fief_list()
+
     def update_family_tree(self):
         tree = self.family_tree_widget
         tree.setUpdatesEnabled(False)
@@ -1671,7 +2005,7 @@ class DynastyApp(QMainWindow):
                 roots.append(p)
 
         for cid in children_map:
-            children_map[cid].sort(key=lambda x: (-x.age, x.id))
+            children_map[cid].sort(key=lambda x: (x.birth_year, x.id))
 
         def make_node(parent, person):
             is_now = (person.id == self.current_emperor_pid)
@@ -1694,12 +2028,13 @@ class DynastyApp(QMainWindow):
                 shimiao,
                 str(person.generation),
             ])
+            node.setData(0, Qt.UserRole, person.id)
             node.setExpanded(True)
             for child in children_map.get(person.id, []):
                 make_node(node, child)
 
         # 开国皇帝（无父者）为根；其余旁支归入“旁系”
-        roots.sort(key=lambda x: (0 if x.father_id is None else 1, x.generation, -x.age))
+        roots.sort(key=lambda x: (0 if x.father_id is None else 1, x.generation, x.birth_year, x.id))
         main_root = None
         side_roots = []
         for r in roots:
@@ -1717,6 +2052,288 @@ class DynastyApp(QMainWindow):
                 make_node(side_item, r)
 
         tree.setUpdatesEnabled(True)
+
+    def update_fief_list(self):
+        if not hasattr(self, "fief_table"):
+            return
+        fiefs = self.collect_fiefs()
+        self.fief_table.setRowCount(0)
+        for i, fief in enumerate(fiefs):
+            self.fief_table.insertRow(i)
+            current = fief["current"]
+            current_name = current.name if current else "—"
+            rank_label = self.get_rank_label(fief["rank"])
+            status = "绝封" if fief["extinct"] else "存续"
+            full_title = f"{fief['name']}{rank_label}" if fief["rank"] else fief["name"]
+            items = [
+                fief["name"],
+                full_title,
+                rank_label,
+                current_name,
+                str(fief["alive_count"]),
+                str(fief["total_count"]),
+                status,
+            ]
+            for col, text in enumerate(items):
+                item = QTableWidgetItem(text)
+                if col == 0:
+                    item.setData(Qt.UserRole, fief["name"])
+                self.fief_table.setItem(i, col, item)
+        # 若当前选中的封国仍在，刷新右侧世系；否则清空
+        if hasattr(self, "_selected_fief_name") and self._selected_fief_name:
+            names = {f["name"] for f in fiefs}
+            if self._selected_fief_name in names:
+                self.show_fief_lineage(self._selected_fief_name)
+            else:
+                self.fief_lineage_tree.clear()
+                self.fief_detail_label.setText("选择左侧封国以查看世系")
+                self._selected_fief_name = None
+
+    def build_lineage_tree_widget(self, root_person, fief_name=None, include_females=False):
+        """构建以 root 为根的男系世系树；fief_name 时仅展开同封国成员为主干。"""
+        tree = QTreeWidget()
+        tree.setColumnCount(4)
+        tree.setHeaderLabels(["姓名 / 称号", "状态", "谥号", "代数"])
+        tree.setColumnWidth(0, 220)
+        tree.setColumnWidth(1, 80)
+        tree.setColumnWidth(2, 140)
+        tree.setColumnWidth(3, 50)
+        tree.setAlternatingRowColors(True)
+
+        if not root_person:
+            return tree
+
+        def node_label(p):
+            title_str = f" {p.title}" if p.title else ""
+            mark = ""
+            if p.id == self.current_emperor_pid:
+                mark = "★ "
+            if fief_name and p.is_alive and p.has_title and p.title_name == fief_name:
+                mark = "◆ " + mark
+            return mark + p.name + title_str
+
+        def status_of(p):
+            s = "存活" if p.is_alive else "已故"
+            if p.extinct:
+                s += "·绝嗣"
+            if p.is_heir:
+                s += "·世子"
+            return s
+
+        def shimiao_of(p):
+            if p.miaohao:
+                return f"庙号 {p.miaohao}"
+            return p.shihao or ""
+
+        def add_node(parent_item, person, depth=0):
+            item = QTreeWidgetItem(parent_item, [
+                node_label(person),
+                status_of(person),
+                shimiao_of(person),
+                str(person.generation),
+            ])
+            item.setData(0, Qt.UserRole, person.id)
+            item.setExpanded(depth < 6)
+            sons = []
+            daughters = []
+            for cid in person.children:
+                child = self.get_person_by_id(cid)
+                if not child:
+                    continue
+                if child.gender == "M":
+                    sons.append(child)
+                elif include_females:
+                    daughters.append(child)
+            sons.sort(key=lambda c: (c.birth_year, c.id))
+            daughters.sort(key=lambda c: (c.birth_year, c.id))
+            for son in sons:
+                add_node(item, son, depth + 1)
+            for dau in daughters:
+                d_item = QTreeWidgetItem(item, [
+                    node_label(dau),
+                    status_of(dau),
+                    shimiao_of(dau),
+                    str(dau.generation),
+                ])
+                d_item.setData(0, Qt.UserRole, dau.id)
+
+        add_node(tree, root_person)
+        tree.itemDoubleClicked.connect(self.on_lineage_tree_person_clicked)
+        return tree
+
+    def on_lineage_tree_person_clicked(self, item, column):
+        pid = item.data(0, Qt.UserRole)
+        if pid is None:
+            return
+        self.show_person_detail_dialog(int(pid))
+
+    def on_family_tree_item_clicked(self, item, column):
+        pid = item.data(0, Qt.UserRole)
+        if pid is None:
+            return
+        self.show_person_detail_dialog(int(pid))
+
+    def on_family_table_clicked(self, row, column):
+        pid_item = self.family_table.item(row, 0)
+        if not pid_item:
+            return
+        try:
+            pid = int(pid_item.text())
+        except ValueError:
+            return
+        self.show_person_detail_dialog(pid)
+
+    def on_fief_table_clicked(self, row, column):
+        name_item = self.fief_table.item(row, 0)
+        if not name_item:
+            return
+        fief_name = name_item.data(Qt.UserRole) or name_item.text()
+        self._selected_fief_name = fief_name
+        self.show_fief_lineage(fief_name)
+
+    def show_fief_lineage(self, fief_name):
+        if not hasattr(self, "fief_lineage_tree"):
+            return
+        fiefs = {f["name"]: f for f in self.collect_fiefs()}
+        fief = fiefs.get(fief_name)
+        self.fief_lineage_tree.clear()
+        if not fief:
+            self.fief_detail_label.setText("封国不存在")
+            return
+
+        rank_label = self.get_rank_label(fief["rank"])
+        current = fief["current"]
+        current_txt = current.name if current else "—"
+        status = "绝封" if fief["extinct"] else "存续"
+        self.fief_detail_label.setText(
+            f"{fief_name}{rank_label}　｜　国主：{current_txt}　｜　"
+            f"在世 {fief['alive_count']} / 历任 {fief['total_count']}　｜　{status}"
+        )
+
+        # 世系：以最早受封者为根，展示其男系后裔；同封国者加标记
+        root = self.find_fief_lineage_root(fief_name)
+        if not root:
+            return
+
+        # 重建到内嵌树
+        self.fief_lineage_tree.setUpdatesEnabled(False)
+        self.fief_lineage_tree.clear()
+
+        holders_ids = {h.id for h in fief["holders"]}
+
+        def node_label(p):
+            title_str = f" {p.title}" if p.title else ""
+            mark = ""
+            if p.is_alive and p.has_title and p.title_name == fief_name:
+                mark = "◆ "
+            elif p.id in holders_ids:
+                mark = "· "
+            return mark + p.name + title_str
+
+        def status_of(p):
+            s = "存活" if p.is_alive else "已故"
+            if p.extinct:
+                s += "·绝嗣"
+            if p.is_heir:
+                s += "·世子"
+            if p.title_name == fief_name and p.has_title and p.is_alive:
+                s += "·国主"
+            return s
+
+        def shimiao_of(p):
+            if p.miaohao:
+                return f"庙号 {p.miaohao}"
+            return p.shihao or ""
+
+        def add_node(parent_item, person, depth=0):
+            # 只展示：本封国持有者，或其后裔中有本封国者（保持世系连通）
+            item = QTreeWidgetItem(parent_item if parent_item is not None else self.fief_lineage_tree, [
+                node_label(person),
+                status_of(person),
+                shimiao_of(person),
+                str(person.generation),
+            ])
+            item.setData(0, Qt.UserRole, person.id)
+            item.setExpanded(True)
+            sons = []
+            for cid in person.children:
+                child = self.get_person_by_id(cid)
+                if child and child.gender == "M":
+                    sons.append(child)
+            sons.sort(key=lambda c: (c.birth_year, c.id))
+            for son in sons:
+                add_node(item, son, depth + 1)
+
+        add_node(None, root)
+        self.fief_lineage_tree.setUpdatesEnabled(True)
+
+    def show_person_detail_dialog(self, pid):
+        person = self.get_person_by_id(pid)
+        if not person:
+            return
+
+        dialog = QDialog(self)
+        dialog.setWindowTitle(f"人物 · {person.name}")
+        dialog.resize(560, 620)
+        layout = QVBoxLayout()
+
+        # —— 基本信息 ——
+        info_section = QLabel("— 人 物 详 情 —")
+        info_section.setObjectName("section_label")
+        layout.addWidget(info_section)
+
+        form = QFormLayout()
+        form.addRow("姓名:", QLabel(person.name))
+        form.addRow("性别:", QLabel("男" if person.gender == "M" else "女"))
+        form.addRow("年龄:", QLabel(str(person.age)))
+        form.addRow("生卒:", QLabel(self.format_person_year(person)))
+        form.addRow("状态:", QLabel("存活" if person.is_alive else "已故"))
+        form.addRow("代数:", QLabel(str(person.generation)))
+        form.addRow("字辈:", QLabel(self.get_zibei_char(person.generation) if self.zibei_poem else "—"))
+        form.addRow("称号:", QLabel(person.title or "—"))
+        form.addRow("国别:", QLabel(self.get_guobie(person)))
+        form.addRow("封号:", QLabel(person.title_name or "—"))
+        form.addRow("爵位:", QLabel(self.get_rank_label(person.title_rank) if person.title_rank else "—"))
+        form.addRow("世子:", QLabel("是" if person.is_heir else "否"))
+        form.addRow("在封:", QLabel("是" if person.has_title else "否"))
+        form.addRow("能力:", QLabel(str(person.ability)))
+        form.addRow("父亲:", QLabel(self.get_father_name(person)))
+        form.addRow("配偶:", QLabel(self.get_spouse_name(person)))
+        form.addRow("子女:", QLabel(self.get_children_summary(person)))
+        if person.miaohao:
+            form.addRow("庙号:", QLabel(person.miaohao))
+        if person.shihao:
+            form.addRow("谥号:", QLabel(person.shihao))
+        if person.zunhao:
+            form.addRow("尊号:", QLabel(person.zunhao))
+        if person.extinct:
+            form.addRow("绝嗣:", QLabel("是"))
+        if person.adopted_from is not None:
+            adp = self.get_person_by_id(person.adopted_from)
+            form.addRow("过继自:", QLabel(adp.name if adp else str(person.adopted_from)))
+        layout.addLayout(form)
+
+        # —— 家族树 ——
+        tree_section = QLabel("— 家 族 树（男系）—")
+        tree_section.setObjectName("section_label")
+        layout.addWidget(tree_section)
+
+        # 向上找到本支可见根：优先本人；若有父则从父起展示一代上下文
+        root = person
+        if person.father_id is not None:
+            father = self.get_person_by_id(person.father_id)
+            if father and father.gender == "M":
+                root = father
+
+        lineage = self.build_lineage_tree_widget(root, include_females=True)
+        lineage.setMaximumHeight(280)
+        layout.addWidget(lineage)
+
+        close_btn = QPushButton("关闭")
+        close_btn.clicked.connect(dialog.accept)
+        layout.addWidget(close_btn)
+        dialog.setLayout(layout)
+        dialog.exec()
 
     def show_new_emp_dialog(self):
         self.dialog_year_input.setText(self.yearNumber)
@@ -1742,56 +2359,8 @@ class DynastyApp(QMainWindow):
             self.new_emp_dialog.exec()
 
     def show_family_tree_dialog(self, row, column):
-        pid_item = self.family_table.item(row, 0)
-        if not pid_item:
-            return
-
-        pid = int(pid_item.text())
-        person = self.get_person_by_id(pid)
-        if not person:
-            return
-
-        dialog = QDialog(self)
-        dialog.setWindowTitle(f"{person.name} 的家谱")
-        dialog.resize(400, 500)
-
-        layout = QVBoxLayout()
-        tree = QTreeWidget()
-        tree.setHeaderLabel("家族树 (仅显示男嗣)")
-
-        # Build tree recursively
-        def add_node(parent_widget, p_id):
-            p = self.get_person_by_id(p_id)
-            if not p: return
-
-            # Label format: Name (Title) - Status
-            title_str = f" ({p.title})" if p.title else ""
-            status_str = "存活" if p.is_alive else "已故"
-            if p.extinct: status_str += " - 绝嗣"
-
-            guobie_str = self.get_guobie(p)
-            guobie_str = f" {guobie_str}" if guobie_str and guobie_str != "未封" else ""
-
-            item_text = f"{p.name}{title_str}{guobie_str} [{status_str}]"
-            item = QTreeWidgetItem(parent_widget, [item_text])
-
-            for child_id in p.children:
-                child = self.get_person_by_id(child_id)
-                # Only show males in tree to keep it simple and focused on lineage
-                if child and child.gender == "M":
-                    add_node(item, child_id)
-
-            item.setExpanded(True)
-
-        add_node(tree, pid)
-        layout.addWidget(tree)
-
-        close_btn = QPushButton("关闭")
-        close_btn.clicked.connect(dialog.accept)
-        layout.addWidget(close_btn)
-
-        dialog.setLayout(layout)
-        dialog.exec()
+        """兼容旧双击入口 → 人物详情。"""
+        self.on_family_table_clicked(row, column)
 
     def show_end_game_dialog(self):
 
@@ -1945,7 +2514,7 @@ class DynastyApp(QMainWindow):
         tab4_layout.setContentsMargins(16, 12, 16, 12)
 
         # 显眼的皇室宗亲树状图（按国别分组）
-        tree_section = QLabel("— 皇 室 宗 亲 世 系 —")
+        tree_section = QLabel("— 皇 室 宗 亲 世 系 —（单击人名查看详情）")
         tree_section.setObjectName("section_label")
         tab4_layout.addWidget(tree_section)
         self.family_tree_widget = QTreeWidget()
@@ -1959,23 +2528,84 @@ class DynastyApp(QMainWindow):
         self.family_tree_widget.setAlternatingRowColors(True)
         tab4_layout.addWidget(self.family_tree_widget, 3)
 
-        table_section = QLabel("— 宗 亲 录 —")
+        table_section = QLabel("— 宗 亲 录 —（单击姓名查看详情与家族树）")
         table_section.setObjectName("section_label")
         tab4_layout.addWidget(table_section)
         self.family_table = QTableWidget()
         self.family_table.setColumnCount(10)
         self.family_table.setHorizontalHeaderLabels(["ID", "姓名", "性别", "年龄", "称号", "国别", "状态", "谥号", "代数", "绝嗣"])
         self.family_table.verticalHeader().setVisible(False)
+        self.family_table.setSelectionBehavior(QAbstractItemView.SelectRows)
+        self.family_table.setEditTriggers(QAbstractItemView.NoEditTriggers)
         tab4_layout.addWidget(self.family_table, 2)
         self.tab4.setLayout(tab4_layout)
 
+        self.family_table.cellClicked.connect(self.on_family_table_clicked)
         self.family_table.cellDoubleClicked.connect(self.show_family_tree_dialog)
+        self.family_tree_widget.itemClicked.connect(self.on_family_tree_item_clicked)
+
+        # Tab 5: 宗藩
+        self.tab5 = QWidget()
+        tab5_layout = QVBoxLayout()
+        tab5_layout.setContentsMargins(16, 12, 16, 12)
+        fief_section = QLabel("— 宗 藩 诸 国 —（单击封国查看世系）")
+        fief_section.setObjectName("section_label")
+        tab5_layout.addWidget(fief_section)
+
+        fief_splitter = QSplitter(Qt.Horizontal)
+
+        left_fief = QWidget()
+        left_layout = QVBoxLayout()
+        left_layout.setContentsMargins(0, 0, 0, 0)
+        self.fief_table = QTableWidget()
+        self.fief_table.setColumnCount(7)
+        self.fief_table.setHorizontalHeaderLabels(
+            ["封国", "全称", "爵位", "国主", "在世", "历任", "状态"]
+        )
+        self.fief_table.verticalHeader().setVisible(False)
+        self.fief_table.setSelectionBehavior(QAbstractItemView.SelectRows)
+        self.fief_table.setSelectionMode(QAbstractItemView.SingleSelection)
+        self.fief_table.setEditTriggers(QAbstractItemView.NoEditTriggers)
+        self.fief_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        left_layout.addWidget(self.fief_table)
+        left_fief.setLayout(left_layout)
+
+        right_fief = QWidget()
+        right_layout = QVBoxLayout()
+        right_layout.setContentsMargins(0, 0, 0, 0)
+        self.fief_detail_label = QLabel("选择左侧封国以查看世系")
+        self.fief_detail_label.setWordWrap(True)
+        right_layout.addWidget(self.fief_detail_label)
+        lineage_hint = QLabel("◆ 现任国主　· 本封国成员　｜　双击人名可查看详情")
+        lineage_hint.setObjectName("subtitle_label")
+        right_layout.addWidget(lineage_hint)
+        self.fief_lineage_tree = QTreeWidget()
+        self.fief_lineage_tree.setColumnCount(4)
+        self.fief_lineage_tree.setHeaderLabels(["姓名 / 称号", "状态", "谥号", "代数"])
+        self.fief_lineage_tree.setColumnWidth(0, 220)
+        self.fief_lineage_tree.setColumnWidth(1, 90)
+        self.fief_lineage_tree.setColumnWidth(2, 140)
+        self.fief_lineage_tree.setColumnWidth(3, 50)
+        self.fief_lineage_tree.setAlternatingRowColors(True)
+        self.fief_lineage_tree.itemDoubleClicked.connect(self.on_lineage_tree_person_clicked)
+        right_layout.addWidget(self.fief_lineage_tree)
+        right_fief.setLayout(right_layout)
+
+        fief_splitter.addWidget(left_fief)
+        fief_splitter.addWidget(right_fief)
+        fief_splitter.setStretchFactor(0, 2)
+        fief_splitter.setStretchFactor(1, 3)
+        tab5_layout.addWidget(fief_splitter)
+        self.tab5.setLayout(tab5_layout)
+        self._selected_fief_name = None
+        self.fief_table.cellClicked.connect(self.on_fief_table_clicked)
 
         # Add tabs
         self.tabs.addTab(self.tab1, "主界面")
         self.tabs.addTab(self.tab2, "皇帝信息")
         self.tabs.addTab(self.tab3, "王朝信息")
         self.tabs.addTab(self.tab4, "皇室宗亲")
+        self.tabs.addTab(self.tab5, "宗藩")
 
         layout.addWidget(self.tabs)
         self.main_game_screen.setLayout(layout)
