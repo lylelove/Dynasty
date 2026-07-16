@@ -4,11 +4,15 @@ import random
 from PySide6.QtWidgets import (
     QApplication, QMainWindow, QStackedWidget, QWidget, QVBoxLayout,
     QHBoxLayout, QLabel, QLineEdit, QPushButton, QFormLayout, QDialog,
-    QDialogButtonBox, QHeaderView, QTabWidget, QTableWidget, QSlider, QTableWidgetItem,
+    QHeaderView, QTabWidget, QTableWidget, QSlider, QTableWidgetItem,
     QTreeWidget, QTreeWidgetItem
 )
 from PySide6.QtCore import Qt, QTimer
 
+
+def roll_ability():
+    """Random ruler ability score in [1, 9] with a triangular distribution."""
+    return max(1, 5 + math.floor(random.random() * 5) - math.floor(random.random() * 5))
 
 
 class Person:
@@ -27,22 +31,23 @@ class Person:
         self.is_heir = False # Whether this person is the designated heir of their father's rank
         self.has_title = False # Whether they actively hold the rank (true if father is dead or they are independent)
         self.shihao = ""
-        self.ability = 5 + math.floor(random.random() * 5) - math.floor(random.random() * 5)
-        if self.ability <= 0:
-            self.ability = 1
+        self.ability = roll_ability()
         self.hp = 20 + math.floor(random.random() * 40) # life expectancy
         self.age = 0
         self.is_married = False
         self.is_alive = True
         self.generation = generation # Generation distance from first emperor
         self.extinct = False # 绝嗣
+        self.adopted_from = None # 过继来源（嗣父 ID）
+        self.miaohao = "" # 庙号
+        self.zunhao = "" # 尊号（风味化称谓）
 
 
 class DynastyApp(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("王朝 V0.17")
-        self.resize(800, 600)
+        self.resize(920, 640)
 
         # Initialize Game State
         self.init_game_state()
@@ -67,6 +72,9 @@ class DynastyApp(QMainWindow):
         # Dialogs
         self.setup_dialogs()
 
+        # 古风主题样式（墨底金边 · 朱漆宫墙）
+        self.apply_stylesheet()
+
         # Auto-run timer
         self.auto_run = False
         self.timer = QTimer(self)
@@ -78,15 +86,10 @@ class DynastyApp(QMainWindow):
         self.current_emperor_pid = None
         self.next_emperor_pid = None
 
-        self.charts = ''
-        self.opinionData = []
-        self.yearlist = []
-        self.call_event = False
         self.ongame = True
         self.emperor_die = False
         self.dynasty_die = False
         self.emperor_id = 1
-        self.firstgame = True
         self.emperor_age = 0
         self.emperor_hp = 0
         self.emperor_ab = 0
@@ -97,12 +100,10 @@ class DynastyApp(QMainWindow):
         self.dynasty = ""
         self.emperor = ""
         self.yearNumber = ""
+        self.emperor_zunhao = ""
         self.amuse = 50
         self.hardworking = 50
         self.year = 0
-        self.randomdata = 0
-        self.total_amuse = 1
-        self.total_hardworking = 1
         self.listjson = []
         self.current_emperor_nianhao_history = []
 
@@ -123,7 +124,6 @@ class DynastyApp(QMainWindow):
 
         # Event System
         self.event_id = 0
-        self.time_year = ""
         self.event_happened = [{"time": "", "event": ""}]
         self.event_list = [
             {"time": "", "event": "今年无事发生。", "emperor_hp_change": 0, "dynasty_hp_change": 0},
@@ -163,16 +163,21 @@ class DynastyApp(QMainWindow):
             "李", "赵", "王", "郑", "崔", "卢", "韦", "裴", "杜", "苏", "柳", "薛", "韩", "萧", "房", "长孙",
             "高", "杨", "郭", "窦", "徐", "宋", "孔", "颜", "陆", "贺", "沈", "岑", "元", "武", "独孤", "宇文"
         ]
-        self.tang_male_given_single = list("承弘元弘弘思守崇景玄元世重文武德宗道隆光嗣维贞从温弘俨倓恪璿祐祎怡俶俨俊俭倚侃俨恭")
+        self.tang_male_given_single = list("承弘元思守崇景玄世重文武德宗道隆光嗣维贞从温俨倓恪璿祐祎怡俶俊俭倚侃恭昭穆桓烈毅肃靖睿哲宣显英伟雄俊豪杰轩昂昂熙茂勋业基祖宪章经纬韬略邦国天泽润溥淳熙泰恒恒嘉祯祥瑞麟凤龙云鹏鹤松柏山川河岳星辰")
         self.tang_male_given_double = [
             "世民", "承乾", "泰和", "弘义", "弘礼", "弘道", "崇义", "崇礼", "景行", "景仁", "玄成", "守礼",
             "元嘉", "元礼", "宗仪", "宗楚", "德明", "德昭", "道玄", "道兴", "维岳", "从善", "承业", "承礼",
-            "弘文", "弘武", "思恭", "思敬", "守正", "守谦", "景让", "景初", "玄晖", "重润", "重茂", "光弼"
+            "弘文", "弘武", "思恭", "思敬", "守正", "守谦", "景让", "景初", "玄晖", "重润", "重茂", "光弼",
+            "孝瑜", "孝珩", "孝瓘", "孝琬", "孝瓒", "子建", "子敬", "子渊", "叔宝", "叔慎", "仲卿", "少游",
+            "怀仁", "怀义", "怀智", "怀玉", "怀瑾", "明远", "明哲", "明允", "明达", "德裕", "德懋", "德音",
+            "文谦", "文炳", "文蔚", "武韬", "武略", "承恩", "承泽", "承宣", "显达", "显宗", "昭嗣", "昭烈"
         ]
-        self.tang_female_given_single = list("婉令宜安永宁和柔华真玉仙德丽贞淑静惠昭义清嘉")
+        self.tang_female_given_single = list("婉令宜安永宁和柔华真玉仙德丽贞淑静惠昭义清嘉盈瑶璧珂珊珠琦琴书画画诗韵兰菊梅莲蓉萱蕊珍瑶环佩莺燕娥娟娥姬嫱")
         self.tang_female_given_double = [
             "太平", "安乐", "长宁", "金仙", "玉真", "万春", "永宁", "宁国", "和政", "寿安", "新都", "广德",
-            "临川", "襄城", "豫章", "巴陵", "普安", "清河", "常乐", "永嘉", "义阳", "定安", "乐安", "咸宜"
+            "临川", "襄城", "豫章", "巴陵", "普安", "清河", "常乐", "永嘉", "义阳", "定安", "乐安", "咸宜",
+            "延庆", "永泰", "安兴", "金城", "宜芳", "怀思", "晋安", "临晋", "普康", "乐城", "新平", "寿光",
+            "永穆", "永清", "成安", "广宁", "丹阳", "永昌", "升平", "寿昌", "南康", "建宁", "遂安", "始安"
         ]
         self.emperor_firstname_list = "".join(self.tang_surnames)
 
@@ -186,43 +191,46 @@ class DynastyApp(QMainWindow):
             7: "县伯",
         }
         self.rank_name_pools = {
-            1: ["秦", "晋", "齐", "楚", "燕", "赵", "韩", "魏", "梁", "蜀", "吴", "越", "鲁", "宋", "郑", "陈", "许", "卫", "代", "雍", "岐", "凉", "益", "荆"],
-            2: ["陇西", "清河", "太原", "河间", "平原", "赵郡", "中山", "琅琊", "东平", "彭城", "陈留", "汝南", "颍川", "京兆", "弘农", "扶风", "武威", "南阳", "河东", "河内", "安定", "天水"],
-            3: ["蔡", "曹", "霍", "邓", "申", "谯", "谭", "蒋", "鲁", "许", "郧", "郢", "郜", "芮", "郇", "密"],
-            4: ["彭泽", "安吉", "长乐", "富平", "华阴", "蓝田", "新安", "临晋", "临淄", "曲江", "栎阳", "高陵", "始平", "安邑", "河清", "渭南"],
-            5: ["高阳", "武安", "临川", "新都", "安康", "永安", "安平", "义宁", "咸宁", "乐成", "会昌", "丰城", "宁远", "广平", "平恩", "修武"],
-            6: ["长兴", "永丰", "安吉", "富春", "临海", "安喜", "武宁", "崇仁", "延福", "清源", "安义", "平乡"],
-            7: ["永寿", "清苑", "安福", "崇义", "宁化", "乐安", "永平", "宜春", "临汝", "修文", "安仁", "常宁"],
+            1: ["秦", "晋", "齐", "楚", "燕", "赵", "韩", "魏", "梁", "蜀", "吴", "越", "鲁", "宋", "郑", "陈", "许", "卫", "代", "雍", "岐", "凉", "益", "荆", "并", "幽", "朔", "宁", "夏", "辽", "潞", "郓", "夔", "潭", "鄂", "扬", "徐", "青", "兖", "豫", "冀", "蒲", "绛", "泽", "汾", "隰", "丹", "延", "绥", "银", "岢", "岚", "云", "应", "寰", "蔚", "新", "沔", "褒", "泾", "原", "渭", "甘", "肃", "瓜", "沙", "伊", "庭", "安", "蒙", "昆", "密", "石", "芳", "茂", "翼", "维", "当", "柘", "恭", "奉", "霸", "堂", "蓟", "檀", "妫", "儒", "丰", "顺", "营", "平", "慎", "渊", "徽", "郢", "随", "温", "处", "婺", "台", "明", "衢", "睦", "秀", "杭", "苏", "常", "润", "湖"],
+            2: ["陇西", "清河", "太原", "河间", "平原", "赵郡", "中山", "琅琊", "东平", "彭城", "陈留", "汝南", "颍川", "京兆", "弘农", "扶风", "武威", "南阳", "河东", "河内", "安定", "天水", "江夏", "汝阴", "谯", "下邳", "广陵", "临淮", "广阳", "济北", "任城", "东郡", "济南", "北海", "东莱", "城阳", "胶东", "淮阳", "梁", "鲁", "楚", "齐", "燕", "赵", "魏", "韩", "宋", "陈", "庐江", "弋阳", "南康", "庐陵"],
+            3: ["蔡", "曹", "霍", "邓", "申", "谯", "谭", "蒋", "鲁", "许", "郧", "郢", "郜", "芮", "郇", "密", "薛", "程", "尉", "长孙", "宇文", "窦", "于", "毕", "耿", "舒", "邺", "介", "郯", "郪", "郐", "鄅", "鄫", "菖", "鄄", "鄢"],
+            4: ["彭泽", "安吉", "长乐", "富平", "华阴", "蓝田", "新安", "临晋", "临淄", "曲江", "栎阳", "高陵", "始平", "安邑", "河清", "渭南", "阳翟", "颍阴", "舞阳", "博陆", "富春", "余姚", "吴兴", "长城", "建康", "丹阳", "宣城", "庐江", "晋陵", "义兴", "兰陵", "东武", "营陵", "平寿", "剧", "瑕丘", "乘氏", "廪丘", "须昌", "寿张", "博平", "聊城", "高唐", "安德", "平昌", "朱虚"],
+            5: ["高阳", "武安", "临川", "新都", "安康", "永安", "安平", "义宁", "咸宁", "乐成", "会昌", "丰城", "宁远", "广平", "平恩", "修武", "阳信", "猗氏", "闻喜", "解", "蒲子", "大陵", "祁", "平陶", "京陵", "中都", "邬", "阳曲", "广武", "刚", "汾阳", "隰城", "中阳", "离石", "介休", "武乡", "襄陵", "临汾", "铜鞮", "涅", "襄垣", "屯留", "长子", "壶关", "泫氏", "高都"],
+            6: ["长兴", "永丰", "安吉", "富春", "临海", "安喜", "武宁", "崇仁", "延福", "清源", "安义", "平乡", "曲周", "南和", "任", "南皮", "东光", "重合", "重平", "阜城", "修市", "乐乡", "高堤", "建成", "临泾", "安陵", "阴槃", "弋居", "大要", "郁郅", "泥阳", "义渠", "雕阴", "漆垣", "定阳", "高奴", "宜都", "夷道"],
+            7: ["永寿", "清苑", "安福", "崇义", "宁化", "乐安", "永平", "宜春", "临汝", "修文", "安仁", "常宁", "南乡", "比阳", "平氏", "复阳", "桐柏", "舞阴", "堵阳", "赭阳", "上陌", "西鄂", "雉", "鲁阳", "犨", "叶", "湖阳", "博望", "涅阳", "棘阳", "育阳", "朝阳", "新野", "安众", "冠军"],
         }
         self.female_title_pools = {
-            "公主": ["太平", "安乐", "长宁", "宁国", "咸宜", "寿安", "和政", "新昌", "万安", "永嘉", "义阳", "广德", "乐安", "宣城", "临川", "襄城"],
-            "郡主": ["清河", "兰陵", "弘农", "颍川", "安定", "河东", "平原", "东阳", "义兴", "临海", "义宁", "会稽"],
-            "县主": ["新都", "高阳", "安平", "永安", "乐成", "广平", "武安", "平恩", "义宁", "修武", "安康", "宁远"],
-            "乡主": ["安仁", "宁化", "崇义", "乐安", "永平", "清苑", "安福", "临汝", "宜春", "修文"],
+            "公主": ["太平", "安乐", "长宁", "宁国", "咸宜", "寿安", "和政", "新昌", "万安", "永嘉", "义阳", "广德", "乐安", "宣城", "临川", "襄城", "升平", "寿昌", "延庆", "永泰", "安兴", "金城", "宜芳", "怀思", "晋安", "临晋", "普康", "乐城", "新平", "寿光", "永穆", "永清", "成安", "广宁", "丹阳", "永昌"],
+            "郡主": ["清河", "兰陵", "弘农", "颍川", "安定", "河东", "平原", "东阳", "义兴", "临海", "义宁", "会稽", "万寿", "寿光", "安乐", "永宁", "南康", "永兴", "永康", "永平", "嘉兴", "建宁", "益昌", "遂安", "始安", "永明", "绥安", "安庆", "广宁", "华容", "寻阳", "庐陵", "豫章", "长沙", "桂阳", "衡阳", "零陵", "营阳", "汝南", "南郡", "江夏", "魏兴", "广汉", "新都", "宜都", "建平", "永安", "西平", "武威", "张掖", "酒泉", "敦煌", "西海", "晋昌", "高昌", "交趾", "日南", "九真"],
+            "县主": ["新都", "高阳", "安平", "永安", "乐成", "广平", "武安", "平恩", "义宁", "修武", "安康", "宁远", "金城", "华亭", "宏农", "颍阳", "汝阳", "滍阳", "广城", "崆峒", "肃宁", "博野"],
+            "乡主": ["安仁", "宁化", "崇义", "乐安", "永平", "清苑", "安福", "临汝", "宜春", "修文", "高唐", "寿张", "平阳", "襄陵", "猗氏", "安邑", "闻喜", "汾阳", "龙门", "稷山", "绛", "曲沃", "翼城", "沁水", "阳城", "陵川", "高平", "泫氏", "端氏", "获泽", "沁源"],
         }
 
-        self.emperor_miaohao_founders = ["高祖", "太祖", "世祖"]
-        self.emperor_miaohao_prosperous = ["太宗", "玄宗", "宪宗", "宣宗", "肃宗", "德宗", "睿宗", "中宗"]
-        self.emperor_miaohao_stable = ["顺宗", "代宗", "敬宗", "文宗", "穆宗", "懿宗", "僖宗"]
-        self.emperor_miaohao_decline = ["哀宗", "昭宗", "恭宗", "襄宗"]
-        self.emperor_shifa_core_good = ["文", "武", "成", "宣", "景", "睿", "仁", "明"]
-        self.emperor_shifa_core_mid = ["恭", "顺", "穆", "定", "安", "和", "平", "简"]
-        self.emperor_shifa_core_bad = ["悼", "思", "哀", "愍", "厉", "灵", "炀", "幽"]
-        self.emperor_shifa_assist_good = ["孝", "德", "昭", "肃", "宪"]
-        self.emperor_shifa_assist_mid = ["恭", "顺", "庄", "静", "和"]
-        self.emperor_shifa_assist_bad = ["昏", "荒", "厉", "悖", "悼"]
-        self.empress_shihao_good = ["文德", "昭德", "懿德", "恭顺", "贞顺", "元贞", "柔明", "贤肃", "庄宪", "敬慎"]
-        self.empress_shihao_neutral = ["和仪", "恭静", "顺成", "端和", "淑慎", "庄静", "肃恭"]
-        self.empress_shihao_bad = ["哀思", "悼恭", "思顺", "愍和"]
-        self.taizi_shihao_good = ["懿德", "章怀", "恭仁", "孝敬", "宣懿", "忠肃", "惠昭"]
-        self.taizi_shihao_neutral = ["庄", "昭", "敬", "恭", "思", "悼", "怀"]
-        self.taizi_shihao_bad = ["悼", "愍", "哀", "厉"]
-        self.prince_shihao_good = ["恭", "靖", "康", "宪", "敬", "庄", "孝", "忠", "惠", "安"]
-        self.prince_shihao_neutral = ["思", "悼", "怀", "顺", "简", "和", "恪"]
-        self.prince_shihao_bad = ["哀", "愍", "厉", "灵"]
-        self.princess_shihao_good = ["贤", "懿", "淑", "庄", "静", "昭", "宁", "柔", "顺"]
-        self.princess_shihao_neutral = ["悼", "思", "怀", "恭", "惠", "安"]
-        self.princess_shihao_bad = ["悼", "哀", "愍"]
+        self.emperor_miaohao_founders = ["高祖", "太祖", "世祖", "圣祖", "烈祖", "肃祖", "显祖", "昭祖"]
+        self.emperor_miaohao_prosperous = ["太宗", "玄宗", "宪宗", "宣宗", "肃宗", "德宗", "睿宗", "中宗", "仁宗", "孝宗", "圣宗", "兴宗", "章宗", "成宗", "钦宗", "理宗", "度宗", "徽宗", "英宗", "神宗"]
+        self.emperor_miaohao_stable = ["顺宗", "代宗", "敬宗", "文宗", "穆宗", "懿宗", "僖宗", "真宗", "哲宗", "光宗", "宁宗", "端宗", "庆宗", "显宗", "庄宗"]
+        self.emperor_miaohao_decline = ["哀宗", "昭宗", "恭宗", "襄宗", "殇宗", "废宗", "携宗", "怀宗", "思宗", "毅宗", "威宗"]
+        self.emperor_shifa_core_good = ["文", "武", "成", "宣", "景", "睿", "仁", "明", "昭", "圣", "神", "钦", "纯", "康", "肃", "哲"]
+        self.emperor_shifa_core_mid = ["恭", "顺", "穆", "定", "安", "和", "平", "简", "靖", "懿", "襄", "烈", "僖", "隐", "釐", "温"]
+        self.emperor_shifa_core_bad = ["悼", "思", "哀", "愍", "厉", "灵", "炀", "幽", "荒", "悖", "殇", "暴", "沖", "少"]
+        self.emperor_shifa_assist_good = ["孝", "德", "昭", "肃", "宪", "懿", "钦", "纯", "哲", "温"]
+        self.emperor_shifa_assist_mid = ["恭", "顺", "庄", "静", "和", "靖", "穆", "景", "昭", "温"]
+        self.emperor_shifa_assist_bad = ["昏", "荒", "厉", "悖", "悼", "暴", "炀", "幽"]
+        self.empress_shihao_good = ["文德", "昭德", "懿德", "恭顺", "贞顺", "元贞", "柔明", "贤肃", "庄宪", "敬慎", "昭", "懿", "仁", "和", "安", "顺", "淑", "庄", "钦", "成", "康", "靖", "徽", "宣"]
+        self.empress_shihao_neutral = ["和仪", "恭静", "顺成", "端和", "淑慎", "庄静", "肃恭", "惠", "静", "温", "庄", "肃", "穆", "哲", "仪", "容", "裕"]
+        self.empress_shihao_bad = ["哀思", "悼恭", "思顺", "愍和", "幽", "炀", "荒", "暴", "厉", "妖", "惑"]
+        self.taizi_shihao_good = ["懿德", "章怀", "恭仁", "孝敬", "宣懿", "忠肃", "惠昭", "昭", "懿", "温", "靖", "献", "睿", "钦"]
+        self.taizi_shihao_neutral = ["庄", "昭", "敬", "恭", "思", "悼", "怀", "温", "靖", "穆", "和", "静"]
+        self.taizi_shihao_bad = ["悼", "愍", "哀", "厉", "殇", "荒", "炀", "幽"]
+        self.prince_shihao_good = ["恭", "靖", "康", "宪", "敬", "庄", "孝", "忠", "惠", "安", "温", "穆", "肃", "昭", "懿", "献", "荣"]
+        self.prince_shihao_neutral = ["思", "悼", "怀", "顺", "简", "和", "恪", "靖", "懿", "温", "隐", "僖"]
+        self.prince_shihao_bad = ["哀", "愍", "厉", "灵", "荒", "炀", "幽", "暴"]
+        self.princess_shihao_good = ["贤", "懿", "淑", "庄", "静", "昭", "宁", "柔", "顺", "华", "婉", "令", "仪", "徽", "宣", "荣", "嘉", "端"]
+        self.princess_shihao_neutral = ["悼", "思", "怀", "恭", "惠", "安", "昭", "顺", "靖", "和", "穆"]
+        self.princess_shihao_bad = ["悼", "哀", "愍", "荒", "炀", "幽"]
+
+        # 皇帝尊号（风味化称谓，登基时随机组合两段）
+        self.emperor_zunhao_pool = ["圣神", "文武", "睿圣", "应天", "至道", "玄元", "神功", "开天", "法天", "体元", "继天", "中和", "大圣", "大明", "光天", "崇文", "体道", "宪天", "述道", "体天", "法古", "建中", "宣和", "隆兴", "昭明", "敦孝", "钦明", "景命", "绍天", "凝命", "熙载", "显道", "绥猷", "敦叙", "彰信", "垂统", "启运", "肇纪", "景福", "嘉庆", "永乐", "太和", "咸熙", "弘道", "淳化", "雍熙", "端拱", "至治", "泰定"]
 
         self.reset_tang_pools()
 
@@ -282,6 +290,7 @@ class DynastyApp(QMainWindow):
         self.dialog_emperor_list_table = QTableWidget()
         self.dialog_emperor_list_table.setColumnCount(9)
         self.dialog_emperor_list_table.setHorizontalHeaderLabels(["序号", "庙号", "谥号", "姓名", "年龄", "年号", "纪年", "治国手腕", "史书评价"])
+        self.dialog_emperor_list_table.verticalHeader().setVisible(False)
         self.dialog_emperor_list_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         end_game_emp_layout.addWidget(self.dialog_emperor_list_table)
         self.end_game_emp_tab.setLayout(end_game_emp_layout)
@@ -292,6 +301,7 @@ class DynastyApp(QMainWindow):
         self.dialog_event_table = QTableWidget()
         self.dialog_event_table.setColumnCount(2)
         self.dialog_event_table.setHorizontalHeaderLabels(["时间", "事件"])
+        self.dialog_event_table.verticalHeader().setVisible(False)
         self.dialog_event_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         end_game_event_layout.addWidget(self.dialog_event_table)
         self.end_game_event_tab.setLayout(end_game_event_layout)
@@ -314,8 +324,214 @@ class DynastyApp(QMainWindow):
         self.yearNumber = self.dialog_year_input.text()
         self.dio()
 
+    def apply_stylesheet(self):
+        app = QApplication.instance()
+        qss = """
+        /* ===== 全局：宣纸明堂 · 朱漆金边 ===== */
+        QWidget {
+            background-color: #f5efe3;
+            color: #2c1810;
+            font-family: "KaiTi", "STKaiti", "楷体", "FangSong", "仿宋", "SimSun", "宋体", serif;
+            font-size: 14px;
+        }
+        QMainWindow, QDialog {
+            background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                stop:0 #faf6ec, stop:0.5 #f5efe3, stop:1 #ebe0cc);
+        }
+
+        /* 标题 / 匾额 */
+        QLabel#title_label {
+            font-size: 42px;
+            font-weight: bold;
+            color: #8b5a12;
+            letter-spacing: 14px;
+            padding: 14px 0 6px 14px;
+            qproperty-alignment: AlignCenter;
+        }
+        QLabel#subtitle_label {
+            color: #6b4e2e;
+            font-size: 15px;
+            letter-spacing: 4px;
+            padding-bottom: 10px;
+            qproperty-alignment: AlignCenter;
+        }
+        QLabel#reign_banner {
+            font-size: 26px;
+            font-weight: bold;
+            color: #fff8e7;
+            letter-spacing: 6px;
+            padding: 10px 0;
+            border: 2px solid #c9a24b;
+            border-radius: 6px;
+            background: qlineargradient(x1:0,y1:0,x2:0,y2:1,
+                stop:0 #b83a32, stop:1 #8f2420);
+            qproperty-alignment: AlignCenter;
+        }
+        QLabel#section_label {
+            color: #7a4e12;
+            font-size: 16px;
+            font-weight: bold;
+            padding: 6px 0 2px 0;
+            border-bottom: 1px solid #c4a574;
+            margin-bottom: 6px;
+            letter-spacing: 3px;
+        }
+
+        /* 输入框 */
+        QLineEdit {
+            background-color: #fffdf8;
+            border: 1px solid #c4a574;
+            border-radius: 4px;
+            padding: 6px 8px;
+            color: #2c1810;
+            selection-background-color: #d45a4a;
+            selection-color: #fff8e7;
+        }
+        QLineEdit:focus {
+            border: 1px solid #a67c3d;
+            background-color: #ffffff;
+        }
+
+        /* 按钮 —— 朱漆玉印 */
+        QPushButton {
+            background: qlineargradient(x1:0,y1:0,x2:0,y2:1,
+                stop:0 #c4453c, stop:1 #9a2e28);
+            border: 1px solid #b5893f;
+            border-radius: 5px;
+            color: #fff8e7;
+            padding: 7px 16px;
+            font-size: 15px;
+            letter-spacing: 2px;
+        }
+        QPushButton:hover {
+            background: qlineargradient(x1:0,y1:0,x2:0,y2:1,
+                stop:0 #d9554a, stop:1 #b83a32);
+            border: 1px solid #d4af37;
+            color: #ffffff;
+        }
+        QPushButton:pressed {
+            background: #8f2420;
+        }
+
+        /* 标签页 */
+        QTabWidget::pane {
+            border: 1px solid #c4a574;
+            border-radius: 4px;
+            background: #faf6ec;
+            top: -1px;
+        }
+        QTabBar::tab {
+            background: #ebe0cc;
+            color: #5c4030;
+            padding: 8px 18px;
+            border: 1px solid #c4a574;
+            border-bottom: none;
+            border-top-left-radius: 5px;
+            border-top-right-radius: 5px;
+            letter-spacing: 2px;
+        }
+        QTabBar::tab:selected {
+            background: qlineargradient(x1:0,y1:0,x2:0,y2:1,
+                stop:0 #c4453c, stop:1 #9a2e28);
+            color: #fff8e7;
+            border: 1px solid #b5893f;
+            border-bottom: 1px solid #9a2e28;
+        }
+        QTabBar::tab:hover:!selected {
+            background: #f0e6d2;
+            color: #8b5a12;
+        }
+
+        /* 表格 / 树 */
+        QTableWidget, QTreeWidget {
+            background-color: #fffdf8;
+            gridline-color: #d4c4a8;
+            border: 1px solid #c4a574;
+            border-radius: 4px;
+            color: #2c1810;
+            selection-background-color: #c4453c;
+            selection-color: #fff8e7;
+        }
+        QHeaderView::section {
+            background: qlineargradient(x1:0,y1:0,x2:0,y2:1,
+                stop:0 #c4453c, stop:1 #9a2e28);
+            color: #fff8e7;
+            padding: 6px;
+            border: 1px solid #a67c3d;
+            font-weight: bold;
+            letter-spacing: 1px;
+        }
+        QTableWidget::item, QTreeWidget::item {
+            padding: 4px;
+        }
+        QTableWidget::item:alternate, QTreeWidget::item:alternate {
+            background-color: #f3ead8;
+        }
+
+        /* 滑块 */
+        QSlider::groove:horizontal {
+            border: 1px solid #c4a574;
+            height: 6px;
+            border-radius: 3px;
+            background: #ebe0cc;
+        }
+        QSlider::sub-page:horizontal {
+            background: qlineargradient(x1:0,y1:0,x2:1,y2:0,
+                stop:0 #c4453c, stop:1 #c9a24b);
+            border-radius: 3px;
+        }
+        QSlider::handle:horizontal {
+            background: qradialgradient(cx:0.5,cy:0.5,radius:0.5,
+                stop:0 #fff8e7, stop:1 #c9a24b);
+            border: 1px solid #a67c3d;
+            width: 16px;
+            height: 16px;
+            border-radius: 8px;
+            margin: -6px 0;
+        }
+
+        /* 滚动条 */
+        QScrollBar:vertical {
+            background: #ebe0cc;
+            width: 12px;
+            border-radius: 6px;
+        }
+        QScrollBar::handle:vertical {
+            background: #c4a574;
+            border-radius: 6px;
+            min-height: 20px;
+        }
+        QScrollBar::handle:vertical:hover { background: #b5893f; }
+        QScrollBar:horizontal {
+            background: #ebe0cc;
+            height: 12px;
+            border-radius: 6px;
+        }
+        QScrollBar::handle:horizontal {
+            background: #c4a574;
+            border-radius: 6px;
+            min-width: 20px;
+        }
+
+        /* 表单标签 */
+        QLabel {
+            color: #3d2914;
+        }
+        """
+        app.setStyleSheet(qss)
+
     def setup_start_screen(self):
         layout = QVBoxLayout()
+        layout.setContentsMargins(40, 30, 40, 30)
+
+        # 醒目标题，增强代入感
+        title = QLabel("王 朝")
+        title.setObjectName("title_label")
+        subtitle = QLabel("—— 一代天骄，执掌乾坤 ——")
+        subtitle.setObjectName("subtitle_label")
+        layout.addWidget(title)
+        layout.addWidget(subtitle)
+
         form_layout = QFormLayout()
 
         # Dynasty input
@@ -375,7 +591,6 @@ class DynastyApp(QMainWindow):
         if not self.emperor:
             return
         self.emperor_firstname = self.infer_surname_from_name(self.emperor)
-        self.firstgame = not self.firstgame
         self.emperor_age = 26
         # Start emperor with a solid reign: 20 to 45 years left to live.
         self.emperor_hp = 20 + math.floor(random.random() * 25)
@@ -388,6 +603,8 @@ class DynastyApp(QMainWindow):
         emp_person.ability = self.emperor_ab
         emp_person.title = "皇帝"
         emp_person.is_married = True # Assume married
+        self.emperor_zunhao = self.generate_zunhao()
+        emp_person.zunhao = self.emperor_zunhao
         self.people.append(emp_person)
         self.current_emperor_pid = emp_person.id
         self.next_pid += 1
@@ -399,8 +616,6 @@ class DynastyApp(QMainWindow):
         self.used_nianhao.append(self.yearNumber)
         self.start_new_emperor_nianhao_history()
         self.dynasty_function_st()
-        self.opinionData.append(self.dynasty_hp)
-        self.yearlist.append(self.year)
         self.update_ui()
         self.stacked_widget.setCurrentIndex(1)
 
@@ -447,8 +662,6 @@ class DynastyApp(QMainWindow):
     def gamemin(self):
         self.year += 1
         self.event_happen()
-        self.opinionData.append(self.dynasty_hp)
-        self.yearlist.append(self.year)
         self.gamemin_family_aging_death()
         self.gamemin_emperor()
         self.gamemin_dynasty()
@@ -498,8 +711,39 @@ class DynastyApp(QMainWindow):
 
         return not has_alive_male_heir
 
+    def find_adoptee(self, person):
+        """过继：择兄弟之子（侄）中尚存者承嗣，优先未受封、年长者，以减少绝嗣。"""
+        father_id = person.father_id
+        if father_id is None:
+            return None
+
+        candidates = []
+        for sib in self.people:
+            if sib.id == person.id or sib.father_id != father_id or sib.gender != "M":
+                continue
+            for child_id in sib.children:
+                child = self.get_person_by_id(child_id)
+                if child and child.gender == "M" and child.is_alive:
+                    candidates.append(child)
+
+        if not candidates:
+            return None
+
+        # 优先未受封者（可继承本支封国），其次年长者
+        candidates.sort(key=lambda c: (0 if not c.has_title else 1, -c.age))
+        return candidates[0]
+
     def get_rank_suffix(self, rank):
         return self.rank_suffix_map.get(rank, "爵")
+
+    def get_guobie(self, person):
+        """皇亲国戚的国别（封国）。皇帝（含已崩者）归皇室，受封者归其封国，未受封者标未封。"""
+        if (person.id == self.current_emperor_pid or person.title == "皇帝"
+                or person.title == "太子" or person.miaohao):
+            return "皇室"
+        if person.title_name:
+            return person.title_name
+        return "未封"
 
     def is_name_used(self, name):
         return name in self.used_person_names or name in self.used_emperor_names
@@ -527,6 +771,14 @@ class DynastyApp(QMainWindow):
         if random.random() < 0.45:
             return random.choice(self.tang_female_given_single)
         return random.choice(self.tang_female_given_double)
+
+    def generate_zunhao(self):
+        """组合两段尊号碎片，生成如『圣神文武皇帝』的风味化尊号。"""
+        pool = list(self.emperor_zunhao_pool)
+        if len(pool) < 2:
+            return "皇帝"
+        frags = random.sample(pool, 2)
+        return "".join(frags) + "皇帝"
 
     def generate_full_name(self, gender, surname=None):
         family_name = surname if surname else random.choice(self.tang_surnames)
@@ -715,16 +967,34 @@ class DynastyApp(QMainWindow):
 
                     if heir:
                         heir.title_name = p.title_name
+                        heir.title_rank = p.title_rank
                         heir.has_title = True
                         p.has_title = False # Handed off
                     else:
-                        # Check extinction properly
-                        p.extinct = self.check_extinct(p.id)
+                        # 减少绝嗣：无子则尝试过继侄子承嗣
+                        adoptee = self.find_adoptee(p)
+                        if adoptee:
+                            p.extinct = False
+                            adoptee.is_heir = True
+                            adoptee.adopted_from = p.id
+                            if not adoptee.has_title and p.title_name:
+                                # 嗣子继承本支封国，国祚得以延续
+                                adoptee.title_name = p.title_name
+                                adoptee.title_rank = p.title_rank
+                                adoptee.has_title = True
+                                p.has_title = False
+                            elif p.title_name:
+                                # 嗣子已有封国，本支封国收回
+                                self.available_title_pools.setdefault(p.title_rank, []).append(p.title_name)
+                                p.has_title = False
+                        else:
+                            # Check extinction properly
+                            p.extinct = self.check_extinct(p.id)
 
-                        # Line effectively extinct for inheritance purposes if no direct heir found to take the title
-                        if p.title_name:
-                            self.available_title_pools.setdefault(p.title_rank, []).append(p.title_name)
-                            p.has_title = False
+                            # Line effectively extinct for inheritance purposes if no direct heir found to take the title
+                            if p.title_name:
+                                self.available_title_pools.setdefault(p.title_rank, []).append(p.title_name)
+                                p.has_title = False
 
     def get_random_name(self, gender):
         name = self.generate_full_name(gender, surname=self.emperor_firstname)
@@ -770,9 +1040,9 @@ class DynastyApp(QMainWindow):
 
             is_emperor = (p.id == self.current_emperor_pid)
 
-            # Marriage logic: Age > 16, 10% chance per year to marry if not married
+            # Marriage logic: Age >= 16, higher chance to marry so fewer bachelors
             if p.age >= 16 and not p.is_married:
-                if random.random() < 0.1:
+                if random.random() < 0.2:
                     p.is_married = True
                     spouse_name = self.generate_full_name("F")
                     self.register_person_name(spouse_name)
@@ -788,8 +1058,8 @@ class DynastyApp(QMainWindow):
 
             # Birth logic: Emperor has harem, so no marriage check needed.
             if (p.is_married or is_emperor) and p.age >= 15 and p.age <= 60:
-                # Calculate chance based on rank
-                chance = 0.3 if is_emperor else 0.1
+                # Calculate chance based on rank (提高生育率)
+                chance = 0.5 if is_emperor else 0.2
 
                 if random.random() < chance:
                     existing_sons = [self.get_person_by_id(cid) for cid in p.children]
@@ -802,7 +1072,11 @@ class DynastyApp(QMainWindow):
 
                     self.try_spawn_child(p, child_rank)
 
-                    if is_emperor and random.random() < 0.1:
+                    # 提高生育率：尚无子嗣者，额外给一次生育机会，减少无后
+                    if len(existing_sons) == 0 and random.random() < 0.3:
+                        self.try_spawn_child(p, child_rank)
+
+                    if is_emperor and random.random() < 0.2:
                         self.try_spawn_child(p, 1)
 
     def update_heirs(self):
@@ -887,29 +1161,29 @@ class DynastyApp(QMainWindow):
             # Balance: Slow down dynasty decay to last ~150-300 years
             self.dynasty_hp = self.dynasty_hp - (self.amuse / 60 * 2.5 / max(1, self.emperor_ab)) + (self.hardworking / 60 * self.emperor_ab / 15)
             self.dynasty_age += 1
+
         if self.dynasty_hp >= 100:
             self.dynasty_hp = 100
+
+        # A brilliant ruler (ability >= 8) can keep the dynasty from collapsing
+        # below a floor of 15, but only while the dynasty still stands.
+        if 0 < self.dynasty_hp <= 15 and self.emperor_ab >= 8:
+            self.dynasty_hp = 15
+
         if self.dynasty_hp <= 0:
+            self.dynasty_die = True
+            self.dynasty_hp = 0
             if self.ongame:
                 self.gamemin_shihao()
                 self.gamemin_dynasty_change()
-                self.dynasty_die = True
-                self.dynasty_hp = 0
                 self.ongame = False
                 self.show_end_game_dialog()
-            else:
-                self.dynasty_die = True
-                self.dynasty_hp = 0
-        if self.dynasty_hp <= 15:
-            if self.emperor_ab >= 8:
-                self.dynasty_hp = 15
 
     def gamemin_emperor(self):
         if self.dynasty_hp > 0:
             if self.emperor_hp > 0:
                 self.emperor_age += 1
                 self.jinian += 1
-                self.randomdata = random.random()
                 self.emperor_hp -= 1
 
                 # Sync emperor's age with Person object
@@ -930,6 +1204,7 @@ class DynastyApp(QMainWindow):
                     self.gamemin_shihao()
                     if emp_person:
                         emp_person.shihao = self.shihao
+                        emp_person.miaohao = self.miaohao
 
                     self.emperor_die = True
                     self.gamemin_emperor_change()
@@ -973,9 +1248,13 @@ class DynastyApp(QMainWindow):
         if self.emperor_id == 1:
             self.miaohao = get_unique_miaohao(self.emperor_miaohao_founders) or "高祖"
         else:
-            if performance_score >= 10:
+            # 庙号档次与史书评价档次保持一致：
+            #   盛世明君 / 中兴守成  ->  prosperous（太宗、玄宗、宪宗、宣宗…）
+            #   平庸 / 昏庸          ->  stable  （顺宗、代宗、文宗、穆宗、敬宗…）
+            #   亡国末代             ->  decline （哀宗、昭宗、恭宗、襄宗）
+            if performance_score >= 6:
                 target_pool = self.emperor_miaohao_prosperous
-            elif performance_score >= 3:
+            elif performance_score >= -6:
                 target_pool = self.emperor_miaohao_stable
             else:
                 target_pool = self.emperor_miaohao_decline
@@ -995,10 +1274,14 @@ class DynastyApp(QMainWindow):
 
         self.used_miaohao.append(self.miaohao)
 
-        if performance_score >= 12:
+        # 谥号档次：开国之君例用褒谥；其余依功过，且仅明显败坏之朝方用恶谥
+        if self.emperor_id == 1:
             core_pool = self.emperor_shifa_core_good
             assist_pool = self.emperor_shifa_assist_good
-        elif performance_score >= 5:
+        elif performance_score >= 8:
+            core_pool = self.emperor_shifa_core_good
+            assist_pool = self.emperor_shifa_assist_good
+        elif performance_score >= -4:
             core_pool = self.emperor_shifa_core_mid
             assist_pool = self.emperor_shifa_assist_mid
         else:
@@ -1053,7 +1336,7 @@ class DynastyApp(QMainWindow):
             else:
                 self.verdict = random.choice(["亡国之君，宗庙毁绝", "暴虐无道，天下大乱", "沉迷酒色，丧权辱国"])
 
-    def gamemin_emperor_change(self):
+    def _record_emperor(self):
         nianhao_history = [dict(item) for item in self.current_emperor_nianhao_history if item.get("years", 0) > 0]
         total_reign_years = sum(item["years"] for item in nianhao_history)
         self.listjson.append({
@@ -1068,6 +1351,9 @@ class DynastyApp(QMainWindow):
             "ab": self.emperor_ab,
             "verdict": self.verdict
         })
+
+    def gamemin_emperor_change(self):
+        self._record_emperor()
 
     def gamemin_emperor_new(self):
         self.dynasty_hp -= 2
@@ -1075,53 +1361,37 @@ class DynastyApp(QMainWindow):
             self.dynasty_hp = 1
         self.jinian = 1
 
-        # Inherit from chosen successor if one exists
+        # Inherit from the chosen successor, or generate a new ruler if none exists
         if self.next_emperor_pid:
             succ = self.get_person_by_id(self.next_emperor_pid)
-            if succ:
-                self.emperor = succ.name
-                self.emperor_age = succ.age
-                self.emperor_ab = succ.ability
-                self.emperor_hp = succ.hp
-                succ.title = "皇帝"
-                succ.is_heir = False
-                succ.has_title = False
-                succ.title_name = ""
-                self.current_emperor_pid = succ.id
-                self.next_emperor_pid = None
-            else:
-                # Fallback if successor doesn't exist
-                self.emperor_new_age()
-                self.emperor_ab = 5 + math.floor(random.random() * 5) - math.floor(random.random() * 5)
-                if self.emperor_ab <= 0:
-                    self.emperor_ab = 1
-                self.emperor_new_hp()
+        else:
+            succ = None
+
+        if succ:
+            self.emperor = succ.name
+            self.emperor_age = succ.age
+            self.emperor_ab = succ.ability
+            self.emperor_hp = succ.hp
+            succ.title = "皇帝"
+            succ.is_heir = False
+            succ.has_title = False
+            succ.title_name = ""
+            succ.title_rank = 0  # 即帝位，爵位品级归零，不再保留旧封号
+            self.current_emperor_pid = succ.id
+            self.next_emperor_pid = None
         else:
             self.emperor_new_age()
-            self.emperor_ab = 5 + math.floor(random.random() * 5) - math.floor(random.random() * 5)
-            if self.emperor_ab <= 0:
-                self.emperor_ab = 1
+            self.emperor_ab = roll_ability()
             self.emperor_new_hp()
 
-        self.total_amuse = 1
-        self.total_hardworking = 1
+        self.emperor_zunhao = self.generate_zunhao()
+        if succ:
+            succ.zunhao = self.emperor_zunhao
+
         self.initial_dynasty_hp = self.dynasty_hp
 
     def gamemin_dynasty_change(self):
-        nianhao_history = [dict(item) for item in self.current_emperor_nianhao_history if item.get("years", 0) > 0]
-        total_reign_years = sum(item["years"] for item in nianhao_history)
-        self.listjson.append({
-            "id": self.emperor_id,
-            "name": self.emperor,
-            "nianhao_history": nianhao_history,
-            "nianhao": self.build_nianhao_summary(nianhao_history),
-            "age": self.emperor_age,
-            "jinian": total_reign_years,
-            "miaohao": self.miaohao,
-            "shihao": self.shihao,
-            "ab": self.emperor_ab,
-            "verdict": self.verdict
-        })
+        self._record_emperor()
 
     def gamemin_dynasty_new(self):
         self.people = []
@@ -1135,8 +1405,6 @@ class DynastyApp(QMainWindow):
         self.current_emperor_nianhao_history = []
         self.year = 0
         self.emperor_id = 1
-        self.yearlist = []
-        self.opinionData = []
         self.event_happened = [{"time": "", "event": ""}]
         self.used_shihao = []
         self.used_miaohao = []
@@ -1157,7 +1425,6 @@ class DynastyApp(QMainWindow):
     def dio2(self):
         self.dynasty_die = False
         self.end_game_dialog.accept()
-        self.firstgame = True
         self.gamemin_dynasty_new()
         self.ongame = True
 
@@ -1170,8 +1437,7 @@ class DynastyApp(QMainWindow):
         self.stacked_widget.setCurrentIndex(0)
 
     def dynasty_change_name(self):
-        idx = math.floor(random.random() * len(self.dynasty_name))
-        self.dynasty = self.dynasty_name[idx]
+        self.dynasty = random.choice(self.dynasty_name)
         self.dynasty_input.setText(self.dynasty)
 
     def emperor_change_name(self):
@@ -1292,8 +1558,7 @@ class DynastyApp(QMainWindow):
             self.event_happened.append(change_event)
 
     def event_id_chose(self):
-        if not self.call_event:
-            self.event_id = math.floor(random.random() * len(self.event_list))
+        self.event_id = random.randrange(len(self.event_list))
 
     def event_change(self):
         evt = self.event_list[self.d_event_id]
@@ -1308,6 +1573,10 @@ class DynastyApp(QMainWindow):
             self.data_dynasty_hp_change = 0
 
     def update_ui(self):
+
+        # 朝代年号匾额
+        reign_text = f"　{self.dynasty}　·　{self.yearNumber}　"
+        self.reign_banner.setText(reign_text)
 
         # Update Tab 1
         self.dynasty_label.setText(self.dynasty)
@@ -1328,6 +1597,7 @@ class DynastyApp(QMainWindow):
 
         # Update Tab 2
         self.emp_name_label.setText(self.emperor)
+        self.emp_zunhao_label.setText(self.emperor_zunhao)
         self.emp_age_label.setText(str(self.emperor_age))
         self.emp_hp_label.setText(str(round(self.emperor_hp)))
         self.emp_ab_label.setText(str(self.emperor_ab))
@@ -1353,21 +1623,100 @@ class DynastyApp(QMainWindow):
         # Update Tab 4
         if hasattr(self, 'family_table'):
             self.family_table.setRowCount(0)
+            # 收集所有男性宗亲，按国别分类（同国者聚拢），未封者置后
+            males = [p for p in self.people if p.gender != "F"]
+            males.sort(key=lambda p: (
+                0 if self.get_guobie(p) != "未封" else 1,
+                self.get_guobie(p),
+                p.generation,
+                -p.age,
+            ))
             row_idx = 0
-            for p in self.people:
-                if p.gender == "F":
-                    continue
+            for p in males:
                 self.family_table.insertRow(row_idx)
                 self.family_table.setItem(row_idx, 0, QTableWidgetItem(str(p.id)))
                 self.family_table.setItem(row_idx, 1, QTableWidgetItem(p.name))
                 self.family_table.setItem(row_idx, 2, QTableWidgetItem("男" if p.gender == "M" else "女"))
                 self.family_table.setItem(row_idx, 3, QTableWidgetItem(str(p.age)))
                 self.family_table.setItem(row_idx, 4, QTableWidgetItem(p.title))
-                self.family_table.setItem(row_idx, 5, QTableWidgetItem("存活" if p.is_alive else "已故"))
-                self.family_table.setItem(row_idx, 6, QTableWidgetItem(p.shihao))
-                self.family_table.setItem(row_idx, 7, QTableWidgetItem(str(p.generation)))
-                self.family_table.setItem(row_idx, 8, QTableWidgetItem("绝嗣" if p.extinct else ""))
+                self.family_table.setItem(row_idx, 5, QTableWidgetItem(self.get_guobie(p)))
+                self.family_table.setItem(row_idx, 6, QTableWidgetItem("存活" if p.is_alive else "已故"))
+                self.family_table.setItem(row_idx, 7, QTableWidgetItem(p.shihao))
+                self.family_table.setItem(row_idx, 8, QTableWidgetItem(str(p.generation)))
+                self.family_table.setItem(row_idx, 9, QTableWidgetItem("绝嗣" if p.extinct else ""))
                 row_idx += 1
+
+            # 显眼的树状图：按国别分组展示谱系
+            self.update_family_tree()
+
+    def update_family_tree(self):
+        tree = self.family_tree_widget
+        tree.setUpdatesEnabled(False)
+        tree.clear()
+
+        males = [p for p in self.people if p.gender == "M"]
+        if not males:
+            tree.setUpdatesEnabled(True)
+            return
+
+        # 按父系构建完整世系树（开国皇帝为根，诸子按代数向下嵌套）
+        id_map = {p.id: p for p in males}
+        children_map = {p.id: [] for p in males}
+        roots = []
+        for p in males:
+            fid = p.father_id
+            if fid in id_map:
+                children_map[fid].append(p)
+            else:
+                roots.append(p)
+
+        for cid in children_map:
+            children_map[cid].sort(key=lambda x: (-x.age, x.id))
+
+        def make_node(parent, person):
+            is_now = (person.id == self.current_emperor_pid)
+            title_str = f" {person.title}" if person.title else ""
+            name_str = ("★ " if is_now else "") + person.name + ("（今上）" if is_now else "") + title_str
+            status = "存活" if person.is_alive else "已故"
+            if person.extinct:
+                status += "·绝嗣"
+            shimiao = ""
+            if person.miaohao:
+                shimiao = f"庙号 {person.miaohao}"
+            elif person.shihao:
+                shimiao = person.shihao
+            if person.zunhao and person.is_alive:
+                shimiao = (shimiao + "　" if shimiao else "") + f"尊号 {person.zunhao}"
+            node = QTreeWidgetItem(parent, [
+                name_str,
+                self.get_guobie(person),
+                status,
+                shimiao,
+                str(person.generation),
+            ])
+            node.setExpanded(True)
+            for child in children_map.get(person.id, []):
+                make_node(node, child)
+
+        # 开国皇帝（无父者）为根；其余旁支归入“旁系”
+        roots.sort(key=lambda x: (0 if x.father_id is None else 1, x.generation, -x.age))
+        main_root = None
+        side_roots = []
+        for r in roots:
+            if r.father_id is None and main_root is None:
+                main_root = r
+            else:
+                side_roots.append(r)
+
+        if main_root is not None:
+            make_node(tree, main_root)
+        if side_roots:
+            side_item = QTreeWidgetItem(tree, ["旁系 / 来源不详", "", "", "", ""])
+            side_item.setExpanded(True)
+            for r in side_roots:
+                make_node(side_item, r)
+
+        tree.setUpdatesEnabled(True)
 
     def show_new_emp_dialog(self):
         self.dialog_year_input.setText(self.yearNumber)
@@ -1420,7 +1769,10 @@ class DynastyApp(QMainWindow):
             status_str = "存活" if p.is_alive else "已故"
             if p.extinct: status_str += " - 绝嗣"
 
-            item_text = f"{p.name}{title_str} [{status_str}]"
+            guobie_str = self.get_guobie(p)
+            guobie_str = f" {guobie_str}" if guobie_str and guobie_str != "未封" else ""
+
+            item_text = f"{p.name}{title_str}{guobie_str} [{status_str}]"
             item = QTreeWidgetItem(parent_widget, [item_text])
 
             for child_id in p.children:
@@ -1478,6 +1830,12 @@ class DynastyApp(QMainWindow):
         # Tab 1: 主界面 (Main Interface)
         self.tab1 = QWidget()
         tab1_layout = QVBoxLayout()
+        tab1_layout.setContentsMargins(16, 12, 16, 12)
+
+        # 朝代年号匾额
+        self.reign_banner = QLabel("　　")
+        self.reign_banner.setObjectName("reign_banner")
+        tab1_layout.addWidget(self.reign_banner)
 
         self.basic_info_form = QFormLayout()
         self.dynasty_label = QLabel()
@@ -1497,9 +1855,13 @@ class DynastyApp(QMainWindow):
         tab1_layout.addLayout(self.basic_info_form)
 
         # Event Table
+        event_section = QLabel("— 天 下 纪 事 —")
+        event_section.setObjectName("section_label")
+        tab1_layout.addWidget(event_section)
         self.event_table = QTableWidget()
         self.event_table.setColumnCount(2)
         self.event_table.setHorizontalHeaderLabels(["时间", "事件"])
+        self.event_table.verticalHeader().setVisible(False)
         tab1_layout.addWidget(self.event_table)
 
         # Sliders
@@ -1539,8 +1901,10 @@ class DynastyApp(QMainWindow):
         self.emp_age_label = QLabel()
         self.emp_hp_label = QLabel()
         self.emp_ab_label = QLabel()
+        self.emp_zunhao_label = QLabel()
 
         self.emp_info_form.addRow("姓名:", self.emp_name_label)
+        self.emp_info_form.addRow("尊号:", self.emp_zunhao_label)
         self.emp_info_form.addRow("年龄:", self.emp_age_label)
         self.emp_info_form.addRow("天寿:", self.emp_hp_label)
         self.emp_info_form.addRow("治国手腕:", self.emp_ab_label)
@@ -1551,6 +1915,7 @@ class DynastyApp(QMainWindow):
         # Tab 3: 王朝信息 (Dynasty Info)
         self.tab3 = QWidget()
         tab3_layout = QVBoxLayout()
+        tab3_layout.setContentsMargins(16, 12, 16, 12)
 
         self.dyn_info_form = QFormLayout()
         self.dyn_name_label = QLabel()
@@ -1566,6 +1931,10 @@ class DynastyApp(QMainWindow):
         self.emperor_list_table = QTableWidget()
         self.emperor_list_table.setColumnCount(9)
         self.emperor_list_table.setHorizontalHeaderLabels(["序号", "庙号", "谥号", "姓名", "年龄", "年号", "纪年", "治国手腕", "史书评价"])
+        self.emperor_list_table.verticalHeader().setVisible(False)
+        emp_section = QLabel("— 历 代 帝 王 —")
+        emp_section.setObjectName("section_label")
+        tab3_layout.addWidget(emp_section)
         tab3_layout.addWidget(self.emperor_list_table)
 
         self.tab3.setLayout(tab3_layout)
@@ -1573,10 +1942,31 @@ class DynastyApp(QMainWindow):
         # Tab 4: 皇室宗亲 (Royal Family Info)
         self.tab4 = QWidget()
         tab4_layout = QVBoxLayout()
+        tab4_layout.setContentsMargins(16, 12, 16, 12)
+
+        # 显眼的皇室宗亲树状图（按国别分组）
+        tree_section = QLabel("— 皇 室 宗 亲 世 系 —")
+        tree_section.setObjectName("section_label")
+        tab4_layout.addWidget(tree_section)
+        self.family_tree_widget = QTreeWidget()
+        self.family_tree_widget.setColumnCount(5)
+        self.family_tree_widget.setHeaderLabels(["宗亲", "国别", "状态", "谥号 / 庙号", "代数"])
+        self.family_tree_widget.setColumnWidth(0, 200)
+        self.family_tree_widget.setColumnWidth(1, 80)
+        self.family_tree_widget.setColumnWidth(2, 90)
+        self.family_tree_widget.setColumnWidth(3, 180)
+        self.family_tree_widget.setColumnWidth(4, 50)
+        self.family_tree_widget.setAlternatingRowColors(True)
+        tab4_layout.addWidget(self.family_tree_widget, 3)
+
+        table_section = QLabel("— 宗 亲 录 —")
+        table_section.setObjectName("section_label")
+        tab4_layout.addWidget(table_section)
         self.family_table = QTableWidget()
-        self.family_table.setColumnCount(9)
-        self.family_table.setHorizontalHeaderLabels(["ID", "姓名", "性别", "年龄", "称号", "状态", "谥号", "代数", "绝嗣"])
-        tab4_layout.addWidget(self.family_table)
+        self.family_table.setColumnCount(10)
+        self.family_table.setHorizontalHeaderLabels(["ID", "姓名", "性别", "年龄", "称号", "国别", "状态", "谥号", "代数", "绝嗣"])
+        self.family_table.verticalHeader().setVisible(False)
+        tab4_layout.addWidget(self.family_table, 2)
         self.tab4.setLayout(tab4_layout)
 
         self.family_table.cellDoubleClicked.connect(self.show_family_tree_dialog)
