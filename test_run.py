@@ -5,8 +5,7 @@ from main import DynastyApp
 app = QApplication(sys.argv)
 window = DynastyApp()
 
-# Stub out the blocking GUI dialogs so this can run as a headless smoke test.
-window.show_new_emp_dialog = lambda: window.new_emp_confirm()
+# Stub out the blocking end-game dialog so this can run headless.
 window.show_end_game_dialog = lambda: None
 
 window.dynasty_input.setText("唐")
@@ -20,7 +19,13 @@ for _ in range(5000):
         break
     window.gamemin()
 
+# Spot-check: chronicle rows carry emperor honorific when present
+events = [e for e in window.event_happened[1:] if e.get("event")]
+assert events, "expected chronicle events"
+assert any(e.get("emperor") for e in events), "chronicle should record emperor (尊号)"
+
 print(f"Passed: ran to year {window.year}, dynasty "
       f"{'ended' if window.dynasty_die else 'still standing'}, "
-      f"{len(window.listjson)} emperors recorded")
+      f"{len(window.listjson)} emperors recorded, "
+      f"{len(events)} chronicle rows")
 sys.exit(0)
