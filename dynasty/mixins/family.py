@@ -148,6 +148,71 @@ class FamilyMixin:
                 names.append(child.name)
         return "、".join(names) if names else "无"
 
+    def _ancestor_chain(self, person):
+        """自本人上溯至始祖的父系 id 链：[本人, 父, 祖, …]。"""
+        chain = []
+        cur = person
+        seen = set()
+        while cur is not None and cur.id not in seen:
+            chain.append(cur.id)
+            seen.add(cur.id)
+            if cur.father_id is None:
+                break
+            cur = self.get_person_by_id(cur.father_id)
+        return chain
+
+    def describe_kinship(self, subject, reference):
+        """描述 subject 相对 reference 的父系亲属称谓（如“子”“弟”“侄”）。
+
+        用于国史行文中说明新君与上一代皇帝的关系；无法上溯时归为旁支入继。
+        """
+        if subject is None or reference is None:
+            return "关系不详"
+        if subject.id == reference.id:
+            return "本人"
+
+        # 过继：以嗣父关系优先表述
+        if getattr(subject, "adopted_from", None) == reference.id:
+            return "嗣子（过继）"
+
+        sub_chain = self._ancestor_chain(subject)
+        ref_chain = self._ancestor_chain(reference)
+        ref_index = {pid: i for i, pid in enumerate(ref_chain)}
+
+        # 寻找最近共同祖先，记录两侧到共祖的代距
+        lca = None
+        d_sub = d_ref = None
+        for i, pid in enumerate(sub_chain):
+            if pid in ref_index:
+                lca = pid
+                d_sub = i
+                d_ref = ref_index[pid]
+                break
+
+        if lca is None:
+            # 无共同父系祖先：旁支 / 外藩入继
+            return "旁支入继"
+
+        elder_younger = ""
+        if subject.birth_year != reference.birth_year:
+            elder_younger = "兄" if subject.birth_year < reference.birth_year else "弟"
+
+        if d_ref == 0:
+            # reference 是 subject 的直系尊长
+            return {1: "子", 2: "孙", 3: "曾孙", 4: "玄孙"}.get(d_sub, f"{d_sub}世孙")
+        if d_sub == 0:
+            # subject 是 reference 的直系尊长
+            return {1: "父", 2: "祖父", 3: "曾祖父"}.get(d_ref, f"{d_ref}世祖")
+        if d_sub == 1 and d_ref == 1:
+            return f"{elder_younger or '兄弟'}"
+        if d_sub == 2 and d_ref == 1:
+            return "侄"
+        if d_sub == 1 and d_ref == 2:
+            return "叔伯"
+        if d_sub == 2 and d_ref == 2:
+            return f"堂{elder_younger or '兄弟'}"
+        return "同宗"
+
     def is_important_person(self, person):
         """展示/保留：在世者、现任帝储、曾为帝（庙号）、现任有爵者。
         已故无后支系不靠此标记保留，由 prune 时从在世者向上补祖先。"""

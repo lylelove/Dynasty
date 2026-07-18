@@ -5,6 +5,17 @@
 class HistoryPromptMixin:
     """汇总本局朝代、历代帝王、纪事与国运轨迹，拼装成可复制的国史写作提示词。"""
 
+    def _describe_emperor_kinship(self, prev_emp, cur_emp):
+        """描述当代皇帝与上一代皇帝的父系亲属关系，供国史行文交代世系承继。"""
+        if prev_emp is None:
+            return "开国之君，肇基立业"
+        prev_p = self.get_person_by_id(prev_emp.get("pid")) if prev_emp.get("pid") else None
+        cur_p = self.get_person_by_id(cur_emp.get("pid")) if cur_emp.get("pid") else None
+        if prev_p is None or cur_p is None:
+            return "承继前代（世系不详）"
+        relation = self.describe_kinship(cur_p, prev_p)
+        return f"为前代（{prev_emp.get('name', '')}）之{relation}"
+
     def build_history_prompt(self):
         """将当前模拟状态整理成一段结构化的中文提示词。"""
         lines = []
@@ -41,15 +52,19 @@ class HistoryPromptMixin:
         if not self.listjson:
             lines.append("（尚无已盖棺定论的帝王，请以开国皇帝的视角起笔。）")
         else:
+            prev_emp = None
             for emp in self.listjson:
                 miaohao = emp.get("miaohao") or "（无庙号）"
                 shihao = emp.get("shihao") or "（无谥号）"
                 nianhao = emp.get("nianhao") or "（无年号）"
+                zunhao = emp.get("zunhao") or "（无尊号）"
                 seg = (
                     f"第 {emp.get('id')} 帝　庙号：{miaohao}　谥号：{shihao}　"
                     f"姓名：{emp.get('name', '')}"
                 )
                 lines.append(seg)
+                lines.append(f"　　尊号：{zunhao}")
+                lines.append(f"　　与前代关系：{self._describe_emperor_kinship(prev_emp, emp)}")
                 lines.append(
                     f"　　年号：{nianhao}　在位约 {emp.get('jinian', 0)} 年　"
                     f"享年 {emp.get('age', 0)}　治国手腕：{emp.get('ab', 0)}/9"
@@ -57,6 +72,7 @@ class HistoryPromptMixin:
                 verdict = emp.get("verdict")
                 if verdict:
                     lines.append(f"　　史评：{verdict}")
+                prev_emp = emp
 
         lines.append("")
         lines.append("=" * 40)

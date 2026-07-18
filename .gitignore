@@ -22,3 +22,16 @@ pnpm-debug.log*
 *.sln
 *.sw?
 __pycache__/
+*.py[cod]
+*$py.class
+.Python
+*.egg-info/
+.eggs/
+dist/
+build/
+*.spec
+*.spec.bak
+
+# 本地打包（脚本、中间产物、发布目录全部忽略）
+packaging/
+

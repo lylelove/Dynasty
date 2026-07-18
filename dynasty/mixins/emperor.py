@@ -440,7 +440,9 @@ class EmperorMixin:
         merit_info = getattr(self, "_last_reign_merit", None) or {}
         self.listjson.append({
             "id": self.emperor_id,
+            "pid": self.current_emperor_pid,
             "name": self.emperor,
+            "zunhao": self.emperor_zunhao,
             "nianhao_history": nianhao_history,
             "nianhao": self.build_nianhao_summary(nianhao_history),
             "age": self.emperor_age,
