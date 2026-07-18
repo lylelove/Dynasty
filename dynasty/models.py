@@ -9,6 +9,29 @@ def roll_ability():
     return max(1, 5 + math.floor(random.random() * 5) - math.floor(random.random() * 5))
 
 
+def roll_death_age():
+    """掷目标终年（史实分布）：多数 40–69，少数英年早逝或高寿逾八旬，均值约 50。"""
+    r = random.random()
+    if r < 0.10:
+        return 16 + math.floor(random.random() * 14)   # 16–29 英年早逝
+    if r < 0.25:
+        return 30 + math.floor(random.random() * 10)   # 30–39 中道而殂
+    if r < 0.60:
+        return 40 + math.floor(random.random() * 15)   # 40–54 常见终年
+    if r < 0.88:
+        return 55 + math.floor(random.random() * 15)   # 55–69 得享中寿
+    if r < 0.97:
+        return 70 + math.floor(random.random() * 10)   # 70–79 长寿
+    return 80 + math.floor(random.random() * 10)       # 80–89 高寿
+
+
+def roll_lifespan_at_birth():
+    """出生时掷天寿：含约 8% 早夭（不满 10 岁），余按史实终年分布。"""
+    if random.random() < 0.08:
+        return 2 + math.floor(random.random() * 8)     # 2–9 岁早夭
+    return roll_death_age()
+
+
 class Person:
     def __init__(self, pid, name, gender, birth_year, father_id, mother_id, generation):
         self.id = pid
@@ -28,8 +51,8 @@ class Person:
         self.has_title = False # Whether they actively hold the rank (true if father is dead or they are independent)
         self.shihao = ""
         self.ability = roll_ability()
-        # 天寿：目标终年约 45–70（均值约 55），贴合古代上层男子
-        self.hp = 45 + math.floor(random.random() * 25)
+        # 天寿：按史实分布掷目标终年，多数 40–69，少数早夭或高寿逾八旬
+        self.hp = roll_lifespan_at_birth()
         self.age = 0
         self.is_alive = True
         self.generation = generation # Generation distance from first emperor

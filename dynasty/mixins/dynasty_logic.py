@@ -1,8 +1,6 @@
 # -*- coding: utf-8 -*-
 """国祚结算、天下大势文案、开局与王朝覆灭重置。"""
-import math
-import random
-from dynasty.models import Person
+from dynasty.models import Person, roll_death_age
 
 
 class DynastyLogicMixin:
@@ -13,8 +11,9 @@ class DynastyLogicMixin:
             return
         self.emperor_firstname = self.infer_surname_from_name(self.emperor)
         self.emperor_age = 26
-        # 开国帝约 26 岁登基，余寿 22–42 年 → 终年约 48–68
-        self.emperor_hp = 22 + math.floor(random.random() * 21)
+        # 开国帝 26 岁登基，终年按史实分布掷取（有周世宗之短祚，亦有明太祖之高寿）；
+        # 保底在位 8 年，创业未半即崩殂则戏不成戏
+        self.emperor_hp = max(8, roll_death_age() - self.emperor_age)
         self.emperor_ab = 10
 
         # Create first Emperor Person

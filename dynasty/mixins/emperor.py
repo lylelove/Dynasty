@@ -2,7 +2,7 @@
 """皇帝年岁与驾崩、庙号谥号史评、年号纪年、新君登基。"""
 import math
 import random
-from dynasty.models import Person, roll_ability
+from dynasty.models import Person, roll_ability, roll_death_age
 
 
 class EmperorMixin:
@@ -519,13 +519,17 @@ class EmperorMixin:
         self.reset_reign_fortune_tracking()
 
     def emperor_new_hp(self):
-        # 大一统皇帝终年大致 48–72（均值约 58），与宗室天寿同一量级
-        target_lifespan = 48 + math.floor(random.random() * 25)
+        # 登基重掷终年（史实分布）：多数 40–69，亦有二三十而崩或高寿逾八旬者
+        target_lifespan = roll_death_age()
+        # 幼帝亦可早崩：约 15% 概率仅得 2–9 年短祚（如冲质二帝、汉殇帝之例）
+        if random.random() < 0.15:
+            self.emperor_hp = 2 + math.floor(random.random() * 8)
+            return
         self.emperor_hp = target_lifespan - self.emperor_age
 
-        # 至少在位数年；高龄继位者仍给 3–10 年
+        # 已逾掷得终年（高龄继位）：给 1–8 年余寿
         if self.emperor_hp <= 0:
-            self.emperor_hp = 3 + math.floor(random.random() * 8)
+            self.emperor_hp = 1 + math.floor(random.random() * 8)
 
     def emperor_new_age(self):
         # A realistic succession age: an adult heir is usually 15-40 years old
