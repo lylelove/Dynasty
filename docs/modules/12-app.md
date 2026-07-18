@@ -54,7 +54,7 @@ MRO 保证：业务方法来自各 Mixin；窗口基类为 `QMainWindow`。
 
 - **新皇登基**：姓名/年号（有储君则姓名只读）  
 - **结束**：历代皇帝 + 王朝纪事，确认后重开  
-- **人物详情**：字段表 + 男系家族树  
+- **人物详情**：字段表 + 男系世系图（卡片节点 / 父子连线）  
 
 自动运行时：新皇对话框自动刷新并确认；结束时会停自动运行。
 
@@ -72,9 +72,10 @@ MRO 保证：业务方法来自各 Mixin；窗口基类为 `QMainWindow`。
 | 方法 | 作用 |
 |------|------|
 | `update_ui` | 刷新 Tab1～3 标签与表；调树与宗藩 |
-| `update_family_tree` | 男系完整父系树（开国为根） |
-| `update_fief_list` / `show_fief_lineage` | 宗藩列表与右侧世系 |
-| `build_lineage_tree_widget` | 通用世系树控件（人物详情复用） |
+| `update_family_tree` | 男系完整父系树（开国为根）；人物行背景浅色（见 styles） |
+| `update_fief_list` / `show_fief_lineage` | 宗藩列表与右侧世系（人物行浅色底） |
+| `build_lineage_tree_widget` | QTreeWidget 世系树（宗藩等仍用） |
+| `LineageChartPanel` | 人物详情世系图：中心±2代、⊕展开、全屏；卡片底均为浅色（`lineage_chart.py`） |
 | `show_person_detail_dialog` | 人物弹窗 |
 | `toggle_auto_run` / `auto_run_step` | 500ms 一步，仅 `ongame` 时推进 |
 

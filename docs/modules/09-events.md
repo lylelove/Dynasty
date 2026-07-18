@@ -54,7 +54,7 @@
 
 - 国祚最终是否归零：看 `dynasty_logic.gamemin_dynasty`（本事件只做加减）  
 - 史书评价：皇帝驾崩时用整段国祚变化，不只看单次事件  
-- UI：`update_ui` 把完整 `event_happened[1:]` 追加/填入纪事表（不再截断 50 条，避免界面“卡住”）  
+- UI：主界面「天下纪事」仅显示最新 50 条（`event_happened[1:][-50:]`）；完整历史仍保留在 `event_happened`，结束界面「王朝纪事」展示全部  
 
 ---
 

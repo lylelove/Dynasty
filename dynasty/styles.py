@@ -124,15 +124,15 @@ class StylesMixin:
             color: #8b5a12;
         }
 
-        /* 表格 / 树 */
+        /* 表格 / 树（人物行背景必须浅色） */
         QTableWidget, QTreeWidget {
             background-color: #fffdf8;
             gridline-color: #d4c4a8;
             border: 1px solid #c4a574;
             border-radius: 4px;
             color: #2c1810;
-            selection-background-color: #c4453c;
-            selection-color: #fff8e7;
+            selection-background-color: #f5e6c8;
+            selection-color: #2c1810;
         }
         QHeaderView::section {
             background: qlineargradient(x1:0,y1:0,x2:0,y2:1,
@@ -145,9 +145,23 @@ class StylesMixin:
         }
         QTableWidget::item, QTreeWidget::item {
             padding: 4px;
+            background-color: #fffdf8;
+            color: #2c1810;
         }
         QTableWidget::item:alternate, QTreeWidget::item:alternate {
             background-color: #f3ead8;
+        }
+        QTableWidget::item:selected, QTreeWidget::item:selected {
+            background-color: #f5e6c8;
+            color: #7a1a14;
+        }
+        QTableWidget::item:hover, QTreeWidget::item:hover {
+            background-color: #f8edd8;
+            color: #2c1810;
+        }
+        QTreeWidget::item:selected:active, QTreeWidget::item:selected:!active {
+            background-color: #f5e6c8;
+            color: #7a1a14;
         }
 
         /* 滑块 */
@@ -266,6 +280,24 @@ class StylesMixin:
             font-size: 13px;
             border: 1px solid #c4a574;
             border-radius: 4px;
+            background-color: #fffdf8;
+        }
+        QTreeWidget#fief_lineage_tree::item {
+            background-color: #fffdf8;
+            color: #2c1810;
+        }
+        QTreeWidget#fief_lineage_tree::item:alternate {
+            background-color: #f3ead8;
+        }
+        QTreeWidget#fief_lineage_tree::item:selected,
+        QTreeWidget#fief_lineage_tree::item:selected:active,
+        QTreeWidget#fief_lineage_tree::item:selected:!active {
+            background-color: #f5e6c8;
+            color: #7a1a14;
+        }
+        QTreeWidget#fief_lineage_tree::item:hover {
+            background-color: #f8edd8;
+            color: #2c1810;
         }
         QSplitter#fief_splitter::handle {
             background: #d4c4a8;
@@ -275,6 +307,42 @@ class StylesMixin:
         }
         QSplitter#fief_splitter::handle:hover {
             background: #b5893f;
+        }
+
+        /* 人物详情 · 家族世系图 */
+        QScrollArea#lineage_chart_scroll {
+            background-color: #fffdf8;
+            border: 1px solid #c4a574;
+            border-radius: 4px;
+        }
+        QScrollArea#lineage_chart_scroll > QWidget > QWidget {
+            background-color: #fffdf8;
+        }
+        QWidget#lineage_chart {
+            background-color: #fffdf8;
+        }
+        QLabel#lineage_chart_hint {
+            color: #6b4e2e;
+            font-size: 11px;
+            letter-spacing: 1px;
+            padding: 0 2px;
+            border: none;
+        }
+        QPushButton#lineage_fullscreen_btn {
+            background: qlineargradient(x1:0,y1:0,x2:0,y2:1,
+                stop:0 #c4453c, stop:1 #9a2e28);
+            border: 1px solid #b5893f;
+            border-radius: 4px;
+            color: #fff8e7;
+            padding: 2px 4px;
+            font-size: 16px;
+            letter-spacing: 0px;
+            min-width: 28px;
+        }
+        QPushButton#lineage_fullscreen_btn:hover {
+            background: qlineargradient(x1:0,y1:0,x2:0,y2:1,
+                stop:0 #d9554a, stop:1 #b83a32);
+            border: 1px solid #d4af37;
         }
         """
         app.setStyleSheet(qss)

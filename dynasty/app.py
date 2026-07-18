@@ -4,10 +4,11 @@ from PySide6.QtWidgets import (
     QMainWindow, QStackedWidget, QWidget, QVBoxLayout,
     QHBoxLayout, QLabel, QLineEdit, QPushButton, QFormLayout, QDialog,
     QHeaderView, QTabWidget, QTableWidget, QSlider, QTableWidgetItem,
-    QTreeWidget, QTreeWidgetItem, QComboBox, QSplitter, QAbstractItemView
+    QTreeWidget, QTreeWidgetItem, QComboBox, QSplitter, QAbstractItemView,
 )
 from PySide6.QtCore import Qt, QTimer
 
+from dynasty.lineage_chart import LineageChartPanel
 from dynasty.mixins.dynasty_logic import DynastyLogicMixin
 from dynasty.mixins.emperor import EmperorMixin
 from dynasty.mixins.events import EventsMixin
@@ -221,24 +222,25 @@ class DynastyApp(
         self.dynasty_st_label.setText(self.dynasty_st)
         self.emperor_hp_label.setText(str(round(self.emperor_hp)))
 
-        # Event Table：仅追加新行；若数据被裁剪/重置则整表重建
+        # Event Table：仅显示最新 50 条；完整历史仍保留在 event_happened（结束界面展示全部）
         events = self.event_happened[1:]
+        display_events = events[-50:] if len(events) > 50 else events
         shown = self.event_table.rowCount()
-        need_rebuild = shown > len(events)
-        if not need_rebuild and shown > 0 and events:
+        need_rebuild = shown > len(display_events)
+        if not need_rebuild and shown > 0 and display_events:
             first = self.event_table.item(0, 0)
-            if first is None or first.text() != events[0].get("time", ""):
+            if first is None or first.text() != display_events[0].get("time", ""):
                 need_rebuild = True
         if need_rebuild:
             self.event_table.setRowCount(0)
             shown = 0
-        for i in range(shown, len(events)):
-            ev = events[i]
+        for i in range(shown, len(display_events)):
+            ev = display_events[i]
             self.event_table.insertRow(i)
             self.event_table.setItem(i, 0, QTableWidgetItem(ev.get("time", "")))
             self.event_table.setItem(i, 1, QTableWidgetItem(ev.get("emperor", "")))
             self.event_table.setItem(i, 2, QTableWidgetItem(ev.get("event", "")))
-        if events:
+        if display_events:
             self.event_table.scrollToBottom()
 
         # Update Tab 2
@@ -604,7 +606,7 @@ class DynastyApp(
 
         dialog = QDialog(self)
         dialog.setWindowTitle(f"人物 · {person.name}")
-        dialog.resize(560, 620)
+        dialog.resize(720, 700)
         layout = QVBoxLayout()
 
         # —— 基本信息 ——
@@ -641,21 +643,20 @@ class DynastyApp(
             form.addRow("过继自:", QLabel(adp.name if adp else str(person.adopted_from)))
         layout.addLayout(form)
 
-        # —— 家族树 ——
+        # —— 家族树（图示：中心 ±2 代，可展开 / 全屏）——
         tree_section = QLabel("— 家 族 树（男系）—")
         tree_section.setObjectName("section_label")
         layout.addWidget(tree_section)
 
-        # 向上找到本支可见根：优先本人；若有父则从父起展示一代上下文
-        root = person
-        if person.father_id is not None:
-            father = self.get_person_by_id(person.father_id)
-            if father and father.gender == "M":
-                root = father
-
-        lineage = self.build_lineage_tree_widget(root)
-        lineage.setMaximumHeight(280)
-        layout.addWidget(lineage)
+        chart_panel = LineageChartPanel(
+            get_person_by_id=self.get_person_by_id,
+            center_person=person,
+            focus_id=person.id,
+            current_emperor_pid=self.current_emperor_pid,
+            compact=True,
+        )
+        chart_panel.personActivated.connect(self.show_person_detail_dialog)
+        layout.addWidget(chart_panel, 1)
 
         close_btn = QPushButton("关闭")
         close_btn.clicked.connect(dialog.accept)
