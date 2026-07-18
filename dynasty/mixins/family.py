@@ -84,6 +84,9 @@ class FamilyMixin:
                     # 已过继给他人者不可再过继
                     if child.father_id != sib.id:
                         continue
+                    # 现任皇帝与储君不可出继旁支
+                    if child.id in (self.current_emperor_pid, self.next_emperor_pid):
+                        continue
                     candidates.append(child)
 
         if not candidates:

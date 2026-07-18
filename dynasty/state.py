@@ -32,6 +32,8 @@ class GameStateMixin:
         self.year = 0
         self.listjson = []
         self.current_emperor_nianhao_history = []
+        # 逐年国运轨迹：[{year, hp, emperor, emperor_id, nianhao, jinian}]，供王朝国运图
+        self.dynasty_hp_history = []
 
         # Name and title lists
         self.dynasty_name = ["夏","商","周","秦","汉","晋","隋","唐","宋","元","明","清"]
@@ -43,6 +45,7 @@ class GameStateMixin:
         self.yearNumber_list = list(NIANHAO_NAMES)
         self.shihao = ""
         self.miaohao = ""
+        self.verdict = ""
         self.used_shihao = []
         self.used_miaohao = []
         self.used_emperor_names = []

@@ -33,6 +33,7 @@
 | `year` | 全局游戏年计数 |
 | `listjson` | 已故/卸任皇帝史书记录列表 |
 | `current_emperor_nianhao_history` | 本帝各年号段及年数 |
+| `dynasty_hp_history` | 逐年国运轨迹（年份/国运/在位皇帝/年号），供王朝国运图 |
 | `initial_dynasty_hp` | 本帝登基时国祚快照 |
 | `reign_peak_dynasty_hp` | 本帝在位期间国运峰值 |
 | `reign_trough_dynasty_hp` | 本帝在位期间国运谷值 |

@@ -9,6 +9,7 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Qt, QTimer
 
 from dynasty.lineage_chart import LineageChartPanel
+from dynasty.fortune_chart import FortuneChartDialog
 from dynasty.mixins.dynasty_logic import DynastyLogicMixin
 from dynasty.mixins.emperor import EmperorMixin
 from dynasty.mixins.events import EventsMixin
@@ -229,7 +230,10 @@ class DynastyApp(
         need_rebuild = shown > len(display_events)
         if not need_rebuild and shown > 0 and display_events:
             first = self.event_table.item(0, 0)
-            if first is None or first.text() != display_events[0].get("time", ""):
+            first_ev = self.event_table.item(0, 2)
+            # 时间可能重复（同年改元记两条），需连事件文本一并比对
+            if (first is None or first.text() != display_events[0].get("time", "")
+                    or first_ev is None or first_ev.text() != display_events[0].get("event", "")):
                 need_rebuild = True
         if need_rebuild:
             self.event_table.setRowCount(0)
@@ -802,6 +806,13 @@ class DynastyApp(
 
         tab3_layout.addLayout(self.dyn_info_form)
 
+        self.fortune_chart_btn = QPushButton("查看国运图")
+        self.fortune_chart_btn.clicked.connect(self.show_fortune_chart_dialog)
+        fortune_btn_row = QHBoxLayout()
+        fortune_btn_row.addWidget(self.fortune_chart_btn)
+        fortune_btn_row.addStretch(1)
+        tab3_layout.addLayout(fortune_btn_row)
+
         self.emperor_list_table = QTableWidget()
         self.emperor_list_table.setColumnCount(9)
         self.emperor_list_table.setHorizontalHeaderLabels(["序号", "庙号", "谥号", "姓名", "年龄", "年号", "纪年", "治国手腕", "史书评价"])
@@ -950,6 +961,12 @@ class DynastyApp(
 
         layout.addWidget(self.tabs)
         self.main_game_screen.setLayout(layout)
+
+    def show_fortune_chart_dialog(self):
+        """弹出王朝国运折线图（标注在位皇帝与年号）。"""
+        history = getattr(self, "dynasty_hp_history", None) or []
+        dialog = FortuneChartDialog(history, self.dynasty, self)
+        dialog.exec()
 
     def on_main_tab_changed(self, index):
         """切到宗亲/宗藩时立即刷新，避免因节流看到过期数据。"""

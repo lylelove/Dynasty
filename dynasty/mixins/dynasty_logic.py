@@ -38,8 +38,20 @@ class DynastyLogicMixin:
         self.commit_nianhao(self.yearNumber)
         self.start_new_emperor_nianhao_history()
         self.dynasty_function_st()
+        self.record_dynasty_hp_history()
         self.update_ui()
         self.stacked_widget.setCurrentIndex(1)
+
+    def record_dynasty_hp_history(self):
+        """记录当年国运点位（含在位皇帝与年号），供王朝国运图。"""
+        self.dynasty_hp_history.append({
+            "year": self.year,
+            "hp": round(max(0.0, self.dynasty_hp), 2),
+            "emperor": self.emperor,
+            "emperor_id": self.emperor_id,
+            "nianhao": self.yearNumber,
+            "time": self.d_time or (self.yearNumber + ("元年" if self.jinian == 1 else f"{self.jinian}年")),
+        })
 
     def gamemin_dynasty(self):
         if self.dynasty_hp > 0:
@@ -56,12 +68,21 @@ class DynastyLogicMixin:
             self.dynasty_hp = 15
 
         self.track_reign_dynasty_fortune()
+        self.record_dynasty_hp_history()
 
         if self.dynasty_hp <= 0:
             self.dynasty_die = True
             self.dynasty_hp = 0
             if self.ongame:
                 self.gamemin_shihao()
+                # 亡国之君：人物档案同步身故与谥庙
+                emp_person = self.get_person_by_id(self.current_emperor_pid)
+                if emp_person and emp_person.is_alive:
+                    emp_person.is_alive = False
+                    emp_person.death_year = self.year
+                    emp_person.hp = 0
+                    emp_person.shihao = self.shihao
+                    emp_person.miaohao = self.miaohao
                 self.gamemin_dynasty_change()
                 self.ongame = False
                 self.show_end_game_dialog()
@@ -80,6 +101,7 @@ class DynastyLogicMixin:
         self.jinian = 1
         self.listjson = []
         self.current_emperor_nianhao_history = []
+        self.dynasty_hp_history = []
         self.year = 0
         self.emperor_id = 1
         self.event_happened = [{"time": "", "event": ""}]
@@ -88,6 +110,10 @@ class DynastyLogicMixin:
         self.used_emperor_names = []
         self.used_person_names = set()
         self.used_nianhao = []
+        self.shihao = ""
+        self.miaohao = ""
+        self.verdict = ""
+        self.emperor_die = False
         self.zibei_poem = ""
         self.initial_dynasty_hp = 100
         self.reign_peak_dynasty_hp = 100

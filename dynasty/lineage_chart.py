@@ -261,6 +261,7 @@ class LineageChartWidget(QWidget):
         is_center = self._center_id is not None and p.id == self._center_id
         is_emp = self._emperor_pid is not None and p.id == self._emperor_pid
 
+        # 卡片背景一律浅色（规范见 docs/modules/04-styles.md），身份差异靠边框区分
         if is_focus:
             bg = QColor("#f5e6c8")
             border = QColor("#b83a32")
@@ -270,15 +271,15 @@ class LineageChartWidget(QWidget):
             border = QColor("#a67c3d")
             border_w = 1.8
         elif is_emp:
-            bg = QColor("#f0dcc0")
+            bg = QColor("#f8edd8")
             border = QColor("#8b5a12")
             border_w = 1.8
         elif not p.is_alive:
-            bg = QColor("#ebe4d6")
+            bg = QColor("#f3ead8")
             border = QColor("#b0a090")
             border_w = 1.2
         else:
-            bg = QColor("#fff8e7")
+            bg = QColor("#fffdf8")
             border = QColor("#c4a574")
             border_w = 1.4
 

@@ -31,6 +31,9 @@ class EventsMixin:
         self.event_change()
         self.emperor_hp += self.data_emperor_hp_change
         self.dynasty_hp += self.data_dynasty_hp_change
+        # 先夹紧再记录峰值，避免瞬时 >100 抬高在位功绩评定
+        if self.dynasty_hp > 100:
+            self.dynasty_hp = 100
         self.track_reign_dynasty_fortune()
 
         # 混合制改元：极端国运冲击 + 本段已满数年 + 概率；同帝新年号走主题链

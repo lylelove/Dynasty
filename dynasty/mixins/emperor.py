@@ -2,7 +2,7 @@
 """皇帝年岁与驾崩、庙号谥号史评、年号纪年、新君登基。"""
 import math
 import random
-from dynasty.models import roll_ability
+from dynasty.models import Person, roll_ability
 
 
 class EmperorMixin:
@@ -83,10 +83,10 @@ class EmperorMixin:
                     succ_id = self.find_successor()
                     if succ_id is None:
                         # No successor found, dynasty ends
+                        # 上方 gamemin_emperor_change() 已记录末帝，此处不可再记，否则重复
                         self.ongame = False
                         self.dynasty_die = True
                         self.dynasty_hp = 0
-                        self.gamemin_dynasty_change()
                         self.show_end_game_dialog()
                     else:
                         # If the successor had a title, reclaim it so it can be used again
@@ -490,9 +490,27 @@ class EmperorMixin:
             self.current_emperor_pid = succ.id
             self.next_emperor_pid = None
         else:
+            # 兜底：继位人物对象缺失（如已被裁剪）时生成新君并入宗谱，
+            # 避免 current_emperor_pid 仍指向已故皇帝导致其数据被逐年改写
+            old_emp = self.get_person_by_id(self.current_emperor_pid)
+            gen = (old_emp.generation + 1) if old_emp else 1
             self.emperor_new_age()
             self.emperor_ab = roll_ability()
             self.emperor_new_hp()
+            self.emperor = self.get_random_name("M", generation=gen)
+            self.used_emperor_names.append(self.emperor)
+            new_emp = Person(
+                self.next_pid, self.emperor, "M",
+                self.year - self.emperor_age, None, None, gen,
+            )
+            new_emp.age = self.emperor_age
+            new_emp.hp = self.emperor_hp
+            new_emp.ability = self.emperor_ab
+            new_emp.title = "皇帝"
+            self._register_person(new_emp)
+            self.current_emperor_pid = new_emp.id
+            self.next_pid += 1
+            succ = new_emp
 
         self.emperor_zunhao = self.generate_zunhao()
         if succ:

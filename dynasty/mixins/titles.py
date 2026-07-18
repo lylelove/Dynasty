@@ -144,10 +144,18 @@ class TitlesMixin:
             return random.choice(pool)
 
         if context_score >= 8:
-            return random.choice(self.prince_shihao_good)
-        if context_score >= 4:
-            return random.choice(self.prince_shihao_neutral)
-        return random.choice(self.prince_shihao_bad)
+            core = random.choice(self.prince_shihao_good)
+        elif context_score >= 4:
+            core = random.choice(self.prince_shihao_neutral)
+        else:
+            core = random.choice(self.prince_shihao_bad)
+
+        # 亲王/郡王且非恶谥：有几率得双字谥（如「恭靖」「庄宪」），仿唐宋宗王
+        if person.title_rank in (1, 2) and context_score >= 4 and random.random() < 0.35:
+            assist = random.choice(self.prince_shihao_assist)
+            if assist != core:
+                return f"{core}{assist}"
+        return core
 
     def build_family_posthumous_title(self, person):
         chosen_shihao = self.choose_family_posthumous_word(person)
@@ -192,14 +200,25 @@ class TitlesMixin:
 
                 # 封爵承袭（嫡长含代位）；无后过继；再无则绝封还池
                 if p.gender == "M" and p.has_title:
-                    heir = self.find_heir_of_line(p)
+                    # 现任皇帝/储君不得承袭藩爵（其支系跳过）
+                    exclude = {
+                        pid for pid in (self.current_emperor_pid, self.next_emperor_pid)
+                        if pid is not None
+                    }
+                    heir = self.find_heir_of_line(p, exclude_ids=exclude)
                     if heir and heir.id == p.id:
                         heir = None
 
                     if heir:
+                        # 世子若已有私封，先退还池再承袭父爵，避免封号丢失
+                        if heir.has_title and heir.title_name and heir.title_name != p.title_name:
+                            self.available_title_pools.setdefault(
+                                heir.title_rank, []
+                            ).append(heir.title_name)
                         heir.title_name = p.title_name
                         heir.title_rank = p.title_rank
                         heir.has_title = True
+                        heir.is_heir = False  # 已承袭为国主，不再是世子
                         p.has_title = False
                     else:
                         adoptee = self.find_adoptee(p)
@@ -207,7 +226,6 @@ class TitlesMixin:
                             # 过继入嗣：改父系与子女链，使代位/绝嗣/世系树一致
                             self.apply_adoption(p, adoptee)
                             p.extinct = False
-                            adoptee.is_heir = True
                             if p.title_name:
                                 # 嗣子承封；若本有私封则退还池后再承嗣父之封
                                 if adoptee.has_title and adoptee.title_name:

@@ -21,30 +21,33 @@ class SuccessionMixin:
         sons = self.get_sons_by_birth(person, alive_only=True)
         return sons[0] if sons else None
 
-    def find_heir_of_line(self, person):
+    def find_heir_of_line(self, person, exclude_ids=None):
         """
         嫡长子继承（含代位继承）：
         诸子按出生序；长子在则长子继；长子已故则长子之长子（孙）代位，以此类推。
+        exclude_ids：不可入选者（如现任皇帝/储君），被排除者整支跳过。
         """
+        exclude_ids = exclude_ids or ()
         for son in self.get_sons_by_birth(person, alive_only=False):
+            if son.id in exclude_ids:
+                continue
             if son.is_alive:
                 return son
-            heir = self.find_heir_of_line(son)
+            heir = self.find_heir_of_line(son, exclude_ids)
             if heir:
                 return heir
         return None
 
     def update_heirs(self):
         # 每位有爵/皇帝：嫡长（含代位）为世子——长子在则长子，长子已故则长子一系代位
+        # 先清空在世者旧标记（已故者保留，供当年身后谥号用），再重标正统
+        for p in self.people:
+            if p.is_alive:
+                p.is_heir = False
         for p in self.people:
             is_current_emperor = (p.id == self.current_emperor_pid)
             if p.gender == "M" and ((p.is_alive and p.has_title) or is_current_emperor):
                 rightful = self.find_heir_of_line(p)
-                # 先清空本支直接诸子的世子标记，再标正统（可能是孙）
-                for child_id in p.children:
-                    child = self.get_person_by_id(child_id)
-                    if child and child.gender == "M":
-                        child.is_heir = False
                 if rightful and rightful.is_alive:
                     rightful.is_heir = True
 
