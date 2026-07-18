@@ -5,6 +5,7 @@ from PySide6.QtWidgets import (
     QHBoxLayout, QLabel, QLineEdit, QPushButton, QFormLayout, QDialog,
     QHeaderView, QTabWidget, QTableWidget, QSlider, QTableWidgetItem,
     QTreeWidget, QTreeWidgetItem, QComboBox, QSplitter, QAbstractItemView,
+    QPlainTextEdit, QApplication,
 )
 from PySide6.QtCore import Qt, QTimer
 
@@ -14,6 +15,7 @@ from dynasty.mixins.dynasty_logic import DynastyLogicMixin
 from dynasty.mixins.emperor import EmperorMixin
 from dynasty.mixins.events import EventsMixin
 from dynasty.mixins.family import FamilyMixin
+from dynasty.mixins.history_prompt import HistoryPromptMixin
 from dynasty.mixins.naming import NamingMixin
 from dynasty.mixins.succession import SuccessionMixin
 from dynasty.mixins.titles import TitlesMixin
@@ -33,6 +35,7 @@ class DynastyApp(
     EventsMixin,
     EmperorMixin,
     DynastyLogicMixin,
+    HistoryPromptMixin,
     QMainWindow,
 ):
     """王朝模拟主窗口：组合各功能 Mixin，负责界面与年度主循环编排。"""
@@ -762,12 +765,15 @@ class DynastyApp(
         btn_layout = QHBoxLayout()
         self.auto_run_btn = QPushButton("自动运行")
         btn_layout.addWidget(self.auto_run_btn)
+        self.export_prompt_btn = QPushButton("一键导出国史提示词")
+        btn_layout.addWidget(self.export_prompt_btn)
         tab1_layout.addLayout(btn_layout)
 
         # Connect Signals for Tab 1
         self.hardworking_slider.valueChanged.connect(self.bchange)
         self.amuse_slider.valueChanged.connect(self.achange)
         self.auto_run_btn.clicked.connect(self.toggle_auto_run)
+        self.export_prompt_btn.clicked.connect(self.show_history_prompt_dialog)
         self.tab1.setLayout(tab1_layout)
 
         # Tab 2: 皇帝信息 (Emperor Info)
@@ -966,6 +972,45 @@ class DynastyApp(
         """弹出王朝国运折线图（标注在位皇帝与年号）。"""
         history = getattr(self, "dynasty_hp_history", None) or []
         dialog = FortuneChartDialog(history, self.dynasty, self)
+        dialog.exec()
+
+    def show_history_prompt_dialog(self):
+        """据本局模拟结果生成国史写作提示词，供预览与一键复制到剪贴板。"""
+        prompt_text = self.build_history_prompt()
+
+        dialog = QDialog(self)
+        dialog.setWindowTitle("国史提示词 · 可复制到 AI")
+        dialog.resize(720, 640)
+        layout = QVBoxLayout()
+
+        hint = QLabel("将下面的提示词复制到任意 AI 对话（如 ChatGPT、Claude、豆包等），即可生成一部完整国史。")
+        hint.setObjectName("section_label")
+        hint.setWordWrap(True)
+        layout.addWidget(hint)
+
+        text_edit = QPlainTextEdit()
+        text_edit.setPlainText(prompt_text)
+        text_edit.setReadOnly(True)
+        layout.addWidget(text_edit, 1)
+
+        btn_row = QHBoxLayout()
+        copy_btn = QPushButton("复制到剪贴板")
+        close_btn = QPushButton("关闭")
+        btn_row.addWidget(copy_btn)
+        btn_row.addStretch(1)
+        btn_row.addWidget(close_btn)
+        layout.addLayout(btn_row)
+
+        def do_copy():
+            clipboard = QApplication.clipboard()
+            clipboard.setText(prompt_text)
+            copy_btn.setText("已复制 ✓")
+            QTimer.singleShot(1500, lambda: copy_btn.setText("复制到剪贴板"))
+
+        copy_btn.clicked.connect(do_copy)
+        close_btn.clicked.connect(dialog.accept)
+
+        dialog.setLayout(layout)
         dialog.exec()
 
     def on_main_tab_changed(self, index):
