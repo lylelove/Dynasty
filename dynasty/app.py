@@ -89,6 +89,7 @@ class DynastyApp(
         self.end_game_emp_tab = QWidget()
         end_game_emp_layout = QVBoxLayout()
         self.dialog_emperor_list_table = QTableWidget()
+        self.dialog_emperor_list_table.setEditTriggers(QAbstractItemView.NoEditTriggers)
         self.dialog_emperor_list_table.setColumnCount(9)
         self.dialog_emperor_list_table.setHorizontalHeaderLabels(["序号", "庙号", "谥号", "姓名", "年龄", "年号", "纪年", "治国手腕", "史书评价"])
         self.dialog_emperor_list_table.verticalHeader().setVisible(False)
@@ -100,6 +101,7 @@ class DynastyApp(
         self.end_game_event_tab = QWidget()
         end_game_event_layout = QVBoxLayout()
         self.dialog_event_table = QTableWidget()
+        self.dialog_event_table.setEditTriggers(QAbstractItemView.NoEditTriggers)
         self.dialog_event_table.setColumnCount(3)
         self.dialog_event_table.setHorizontalHeaderLabels(["时间", "皇帝", "事件"])
         self.dialog_event_table.verticalHeader().setVisible(False)
@@ -135,6 +137,7 @@ class DynastyApp(
 
         # Dynasty input
         self.dynasty_input = QLineEdit()
+        self.dynasty_input.setReadOnly(True)
         self.dynasty_btn = QPushButton("刷新")
         dynasty_layout = QHBoxLayout()
         dynasty_layout.addWidget(self.dynasty_input)
@@ -143,6 +146,7 @@ class DynastyApp(
 
         # Emperor input
         self.emperor_input = QLineEdit()
+        self.emperor_input.setReadOnly(True)
         self.emperor_btn = QPushButton("刷新")
         emperor_layout = QHBoxLayout()
         emperor_layout.addWidget(self.emperor_input)
@@ -151,6 +155,7 @@ class DynastyApp(
 
         # Year number input
         self.year_number_input = QLineEdit()
+        self.year_number_input.setReadOnly(True)
         self.year_number_btn = QPushButton("刷新")
         year_number_layout = QHBoxLayout()
         year_number_layout.addWidget(self.year_number_input)
@@ -159,7 +164,7 @@ class DynastyApp(
 
         # 字辈：下拉备选 + 可手改 + 刷新随机
         self.zibei_combo = QComboBox()
-        self.zibei_combo.setEditable(True)
+        self.zibei_combo.setEditable(False)
         self.zibei_combo.addItems(self.zibei_options)
         self.zibei_combo.setCurrentIndex(0)
         self.zibei_btn = QPushButton("刷新")
@@ -742,6 +747,7 @@ class DynastyApp(
         event_section.setObjectName("section_label")
         tab1_layout.addWidget(event_section)
         self.event_table = QTableWidget()
+        self.event_table.setEditTriggers(QAbstractItemView.NoEditTriggers)
         self.event_table.setColumnCount(3)
         self.event_table.setHorizontalHeaderLabels(["时间", "皇帝", "事件"])
         self.event_table.verticalHeader().setVisible(False)
@@ -820,6 +826,7 @@ class DynastyApp(
         tab3_layout.addLayout(fortune_btn_row)
 
         self.emperor_list_table = QTableWidget()
+        self.emperor_list_table.setEditTriggers(QAbstractItemView.NoEditTriggers)
         self.emperor_list_table.setColumnCount(9)
         self.emperor_list_table.setHorizontalHeaderLabels(["序号", "庙号", "谥号", "姓名", "年龄", "年号", "纪年", "治国手腕", "史书评价"])
         self.emperor_list_table.verticalHeader().setVisible(False)
