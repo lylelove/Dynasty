@@ -113,13 +113,32 @@ class DynastyApp(
         self.end_game_tabs.addTab(self.end_game_event_tab, "王朝纪事")
         end_game_layout.addWidget(self.end_game_tabs)
 
-        end_game_layout.addWidget(QLabel("重新开始游戏？"))
-
-        self.end_game_confirm_btn = QPushButton("确 定")
-        end_game_layout.addWidget(self.end_game_confirm_btn)
+        end_btn_row = QHBoxLayout()
+        self.end_game_restart_btn = QPushButton("重新开始")
+        self.end_game_browse_btn = QPushButton("翻阅国史")
+        self.end_game_export_btn = QPushButton("导出提示词")
+        end_btn_row.addWidget(self.end_game_restart_btn)
+        end_btn_row.addWidget(self.end_game_browse_btn)
+        end_btn_row.addWidget(self.end_game_export_btn)
+        end_game_layout.addLayout(end_btn_row)
 
         self.end_game_dialog.setLayout(end_game_layout)
-        self.end_game_confirm_btn.clicked.connect(self.dio2)
+        self.end_game_restart_btn.clicked.connect(self.dio2)
+        # 「翻阅国史」与点 X 关闭同走 rejected：留在主界面翻阅本局史料
+        self.end_game_browse_btn.clicked.connect(self.end_game_dialog.reject)
+        self.end_game_export_btn.clicked.connect(self.show_history_prompt_dialog)
+        self.end_game_dialog.rejected.connect(self.enter_history_browse_mode)
+
+    def enter_history_browse_mode(self):
+        """亡国后翻阅国史：主界面下方按钮切换为单个「重新开始」。"""
+        self.auto_run_btn.hide()
+        self.export_prompt_btn.hide()
+        self.restart_btn.show()
+
+    def exit_history_browse_mode(self):
+        self.restart_btn.hide()
+        self.auto_run_btn.show()
+        self.export_prompt_btn.show()
 
     def setup_start_screen(self):
         layout = QVBoxLayout()
@@ -787,6 +806,10 @@ class DynastyApp(
         btn_layout.addWidget(self.auto_run_btn)
         self.export_prompt_btn = QPushButton("一键导出国史提示词")
         btn_layout.addWidget(self.export_prompt_btn)
+        # 翻阅国史模式下替换上面两个按钮，平时隐藏
+        self.restart_btn = QPushButton("重新开始")
+        self.restart_btn.hide()
+        btn_layout.addWidget(self.restart_btn)
         tab1_layout.addLayout(btn_layout)
 
         # Connect Signals for Tab 1
@@ -794,6 +817,7 @@ class DynastyApp(
         self.amuse_slider.valueChanged.connect(self.achange)
         self.auto_run_btn.clicked.connect(self.toggle_auto_run)
         self.export_prompt_btn.clicked.connect(self.show_history_prompt_dialog)
+        self.restart_btn.clicked.connect(self.dio2)
         self.tab1.setLayout(tab1_layout)
 
         # Tab 2: 皇帝信息 (Emperor Info)

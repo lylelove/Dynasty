@@ -161,7 +161,10 @@ class DynastyLogicMixin:
 
     def dio2(self):
         self.dynasty_die = False
+        # 可能从结束弹窗进入，也可能从翻阅国史模式的「重新开始」进入；
+        # 弹窗未开时 accept 无副作用（accept 只发 accepted，不会触发 rejected）
         self.end_game_dialog.accept()
+        self.exit_history_browse_mode()
         self.gamemin_dynasty_new()
         self.ongame = True
 

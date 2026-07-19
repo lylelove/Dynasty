@@ -89,6 +89,39 @@ class GameStateMixin:
             {"time": "", "event": "编纂大典，文化繁荣。", "emperor_hp_change": 0, "dynasty_hp_change": 4},
             {"time": "", "event": "诸王争储，朝堂党争不断。", "emperor_hp_change": -2, "dynasty_hp_change": -4},
             {"time": "", "event": "连年干旱，颗粒无收。", "emperor_hp_change": -1, "dynasty_hp_change": -5},
+            # 朝政与制度：以具体政务体现治国取舍
+            {"time": "", "event": "宰相裁并冗员，三省奏议渐趋精简。", "emperor_hp_change": 0, "dynasty_hp_change": 3},
+            {"time": "", "event": "御史台纠弹权贵，数名勋戚罢官归第。", "emperor_hp_change": -1, "dynasty_hp_change": 2},
+            {"time": "", "event": "新法骤行，朝臣分为两党，诏令数度反复。", "emperor_hp_change": -2, "dynasty_hp_change": -4},
+            {"time": "", "event": "内帑赈济京畿，百官称颂天子恤民。", "emperor_hp_change": 1, "dynasty_hp_change": 3},
+            {"time": "", "event": "盐铁专卖弊案发，地方豪商与官吏相互遮掩。", "emperor_hp_change": -1, "dynasty_hp_change": -3},
+            # 民生与经济：丰歉、漕运和市舶带来的连锁影响
+            {"time": "", "event": "漕渠淤塞，江南粮船滞留数月，京师米价腾贵。", "emperor_hp_change": -1, "dynasty_hp_change": -4},
+            {"time": "", "event": "常平仓开仓平粜，灾区饥民得以度过春荒。", "emperor_hp_change": 0, "dynasty_hp_change": 4},
+            {"time": "", "event": "市舶司迎来海舶，香药珠玉入市，关税大增。", "emperor_hp_change": 0, "dynasty_hp_change": 4},
+            {"time": "", "event": "关中蝗灾蔽日，百姓驱蝗入河，仍损秋收。", "emperor_hp_change": -1, "dynasty_hp_change": -5},
+            {"time": "", "event": "郡县丈量田亩，隐户隐田渐次登记入籍。", "emperor_hp_change": -1, "dynasty_hp_change": 3},
+            {"time": "", "event": "京畿大雪压塌民舍，朝廷发粟并免除当年租调。", "emperor_hp_change": -1, "dynasty_hp_change": -3},
+            # 边疆与外交：军镇、互市及使节往来
+            {"time": "", "event": "朔方互市重开，边民以绢帛换取良马，烽烟稍息。", "emperor_hp_change": 1, "dynasty_hp_change": 3},
+            {"time": "", "event": "节度使私募牙兵，拒绝交还兵符，朝廷遣使劝谕。", "emperor_hp_change": -1, "dynasty_hp_change": -5},
+            {"time": "", "event": "西域诸国遣使入朝，献胡旋舞与汗血宝马。", "emperor_hp_change": 1, "dynasty_hp_change": 3},
+            {"time": "", "event": "岭南瘴疠阻断驿路，征南军粮转运几近断绝。", "emperor_hp_change": -1, "dynasty_hp_change": -4},
+            {"time": "", "event": "边将轻骑深入敌境，虽获首级甚众，亦折损精锐。", "emperor_hp_change": -1, "dynasty_hp_change": -2},
+            # 宗室、礼制与文化：为纪事和国史提示词提供人物化钩子
+            {"time": "", "event": "太子释奠国学，亲临讲席，士林以为储君知礼。", "emperor_hp_change": 1, "dynasty_hp_change": 3},
+            {"time": "", "event": "宗室请封过滥，朝廷裁定降等承袭以省国费。", "emperor_hp_change": -1, "dynasty_hp_change": 2},
+            {"time": "", "event": "礼官议定郊祀新仪，旧贵族与新进士人争论不休。", "emperor_hp_change": 0, "dynasty_hp_change": 1},
+            {"time": "", "event": "翰林院编成实录，前朝旧闻与宫门秘档得以保存。", "emperor_hp_change": 0, "dynasty_hp_change": 3},
+            {"time": "", "event": "佛寺广置庄田，御史上疏请核免税田亩，僧俗相持。", "emperor_hp_change": -1, "dynasty_hp_change": -2},
+            {"time": "", "event": "宫中乐工新制霓裳曲，宴饮连旬，百官忧其奢靡。", "emperor_hp_change": -2, "dynasty_hp_change": -3},
+            # 灾异与社会：保留可被改元机制捕捉的重大冲击
+            {"time": "", "event": "京师地动，城垣多处倾圮，百姓夜宿空地。", "emperor_hp_change": -1, "dynasty_hp_change": -6},
+            {"time": "", "event": "宫城失火，延烧左藏库，典籍与帑银俱有损失。", "emperor_hp_change": -2, "dynasty_hp_change": -5},
+            {"time": "", "event": "民间结社聚众抗税，郡守开仓安抚后事态稍平。", "emperor_hp_change": -1, "dynasty_hp_change": -4},
+            {"time": "", "event": "名医献治疫方，太医院编成《时气要略》颁行诸道。", "emperor_hp_change": 1, "dynasty_hp_change": 4},
+            {"time": "", "event": "祥鸟集于端门，群臣请加尊号，帝以天戒自持而止。", "emperor_hp_change": 1, "dynasty_hp_change": 2},
+            {"time": "", "event": "流寇余部转掠江淮，州县闭城自守，商旅断绝。", "emperor_hp_change": -1, "dynasty_hp_change": -6},
         ]
         self.data_emperor_hp_change = 0
         self.data_dynasty_hp_change = 0
@@ -96,4 +129,3 @@ class GameStateMixin:
         self.d_event = ""
         self.d_emperor = ""
         self.d_event_id = 0
-
