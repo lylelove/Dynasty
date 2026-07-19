@@ -14,7 +14,11 @@ class DynastyLogicMixin:
         # 开国帝 26 岁登基，终年按史实分布掷取（有周世宗之短祚，亦有明太祖之高寿）；
         # 保底在位 8 年，创业未半即崩殂则戏不成戏
         self.emperor_hp = max(8, roll_death_age() - self.emperor_age)
-        self.emperor_ab = 10
+        # 能力量表为 1–9；开国帝取满值 9（旧值 10 会导致提示词/界面出现 10/9）
+        self.emperor_ab = 9
+        # 开局快照：供国史提示词「开国皇帝/年号」使用（self.emperor 会随换代变化）
+        self.founder_name = self.emperor
+        self.founder_nianhao = self.yearNumber
 
         # Create first Emperor Person
         emp_person = Person(self.next_pid, self.emperor, "M", self.year - self.emperor_age, None, None, 1)
@@ -73,16 +77,17 @@ class DynastyLogicMixin:
             self.dynasty_die = True
             self.dynasty_hp = 0
             if self.ongame:
-                self.gamemin_shihao()
-                # 亡国之君：人物档案同步身故与谥庙
-                emp_person = self.get_person_by_id(self.current_emperor_pid)
-                if emp_person and emp_person.is_alive:
-                    emp_person.is_alive = False
-                    emp_person.death_year = self.year
-                    emp_person.hp = 0
-                    emp_person.shihao = self.shihao
-                    emp_person.miaohao = self.miaohao
-                self.gamemin_dynasty_change()
+                if not self.emperor_die:
+                    self.gamemin_shihao()
+                    # 亡国之君：人物档案同步身故与谥庙
+                    emp_person = self.get_person_by_id(self.current_emperor_pid)
+                    if emp_person and emp_person.is_alive:
+                        emp_person.is_alive = False
+                        emp_person.death_year = self.year
+                        emp_person.hp = 0
+                        emp_person.shihao = self.shihao
+                        emp_person.miaohao = self.miaohao
+                    self.gamemin_dynasty_change()
                 self.ongame = False
                 self.show_end_game_dialog()
 
@@ -109,6 +114,7 @@ class DynastyLogicMixin:
         self.used_emperor_names = []
         self.used_person_names = set()
         self.used_nianhao = []
+        self.used_zunhao = []
         self.shihao = ""
         self.miaohao = ""
         self.verdict = ""
@@ -117,6 +123,8 @@ class DynastyLogicMixin:
         self.initial_dynasty_hp = 100
         self.reign_peak_dynasty_hp = 100
         self.reign_trough_dynasty_hp = 100
+        self.founder_name = ""
+        self.founder_nianhao = ""
 
     def dynasty_function_st(self):
         if self.dynasty_hp >= 90:
@@ -166,4 +174,3 @@ class DynastyLogicMixin:
             self.zibei_combo.setCurrentIndex(0)
 
         self.stacked_widget.setCurrentIndex(0)
-

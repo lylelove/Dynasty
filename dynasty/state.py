@@ -27,6 +27,9 @@ class GameStateMixin:
         self.emperor = ""
         self.yearNumber = ""
         self.emperor_zunhao = ""
+        # 开局快照（换代后 self.emperor 会变，国史提示词仍用开国信息）
+        self.founder_name = ""
+        self.founder_nianhao = ""
         self.amuse = 50
         self.hardworking = 50
         self.year = 0
@@ -51,6 +54,7 @@ class GameStateMixin:
         self.used_emperor_names = []
         self.used_person_names = set()
         self.used_nianhao = []
+        self.used_zunhao = []
         self.initial_dynasty_hp = 100
         # 本帝在位国运轨迹（登基快照 + 峰值/谷值），供谥庙功绩评定
         self.reign_peak_dynasty_hp = 100

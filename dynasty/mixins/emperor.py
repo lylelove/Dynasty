@@ -96,8 +96,6 @@ class EmperorMixin:
                             succ.has_title = False
 
                         self.next_emperor_pid = succ_id
-                        self.ongame = False
-                        self.auto_accession()
                 else:
                     self.emperor_hp = 0
                     self.emperor_die = True
@@ -233,19 +231,69 @@ class EmperorMixin:
             "dynasty_fallen": dynasty_fallen,
         }
 
-    def _pick_unique_miaohao(self, pool, fallback=None):
-        available = list(set(pool) - set(self.used_miaohao))
+    def _posthumous_age_ok(self, token, age, reign_years=0):
+        """谥法/庙号用字是否与享年、在位长短相称（仿正史谥法）。
+
+        - 殇：短折不成，仅未成年早夭
+        - 少：少帝之称，仅少年嗣位而早逝
+        - 冲/沖：冲龄，仅幼冲
+        - 悼：年中早夭，不宜高寿
+        - 殇宗/端宗：短祚幼主或早逝之君
+        """
+        if not token:
+            return True
+        age = age or 0
+        reign_years = reign_years or 0
+        if "殇" in token:
+            return age < 20
+        if "少" in token:
+            return age < 25
+        if "沖" in token or "冲" in token:
+            return age < 18
+        if "悼" in token:
+            return age < 45
+        if token == "殇宗":
+            return age < 20
+        if token == "端宗":
+            # 史多短祚幼主；长君久任不宜
+            return age < 30 or reign_years <= 5
+        if token == "恭宗":
+            # 多短祚、逊位或幼主，不宜久任高寿
+            return age < 40 or reign_years <= 8
+        return True
+
+    def _filter_posthumous_pool(self, pool, age, reign_years=0):
+        """按享年/在位过滤庙号或谥字池；全被滤掉时去掉年龄敏感字再试，仍空则原池。"""
+        filtered = [x for x in pool if self._posthumous_age_ok(x, age, reign_years)]
+        if filtered:
+            return filtered
+        # 避免年龄敏感字回流：仅保留无殇/少/冲/悼等约束的项
+        safe = [
+            x for x in pool
+            if not any(k in x for k in ("殇", "少", "沖", "冲", "悼"))
+            and x not in ("端宗", "恭宗", "殇宗")
+        ]
+        return safe if safe else list(pool)
+
+    def _pick_unique_miaohao(self, pool, fallback=None, age=0, reign_years=0):
+        age_ok = self._filter_posthumous_pool(pool, age, reign_years)
+        available = list(set(age_ok) - set(self.used_miaohao))
         if available:
             return random.choice(available)
+        # 年龄不符时再试未用原池中仍合年龄者（已在 age_ok）；否则仅 fallback
         return fallback
 
     def _assign_miaohao_from_merit(self, eval_result):
         merit = eval_result["merit"]
         tags = eval_result["tags"]
         fallen = eval_result["dynasty_fallen"]
+        age = self.emperor_age
+        reign_years = eval_result.get("reign_years", 0)
 
         if self.emperor_id == 1:
-            self.miaohao = self._pick_unique_miaohao(self.emperor_miaohao_founders, "高祖")
+            self.miaohao = self._pick_unique_miaohao(
+                self.emperor_miaohao_founders, "高祖", age=age, reign_years=reign_years
+            )
         else:
             # 庙号依全程功绩分档，亡国/大衰优先末代池
             if fallen or merit < -8:
@@ -257,18 +305,26 @@ class EmperorMixin:
             else:
                 target_pool = self.emperor_miaohao_decline
 
-            self.miaohao = self._pick_unique_miaohao(target_pool)
+            self.miaohao = self._pick_unique_miaohao(
+                target_pool, age=age, reign_years=reign_years
+            )
             if not self.miaohao:
                 for fallback_pool in [
                     self.emperor_miaohao_prosperous,
                     self.emperor_miaohao_stable,
                     self.emperor_miaohao_decline,
                 ]:
-                    self.miaohao = self._pick_unique_miaohao(fallback_pool)
+                    self.miaohao = self._pick_unique_miaohao(
+                        fallback_pool, age=age, reign_years=reign_years
+                    )
                     if self.miaohao:
                         break
             if not self.miaohao:
-                self.miaohao = "元宗"
+                # 末帝短祚幼主与久任长君分用不同兜底
+                if age < 20 or "duanzuo" in tags:
+                    self.miaohao = "哀宗" if "哀宗" not in self.used_miaohao else "怀宗"
+                else:
+                    self.miaohao = "元宗"
 
         self.used_miaohao.append(self.miaohao)
 
@@ -276,6 +332,8 @@ class EmperorMixin:
         merit = eval_result["merit"]
         tags = eval_result["tags"]
         fallen = eval_result["dynasty_fallen"]
+        age = self.emperor_age
+        reign_years = eval_result.get("reign_years", 0)
 
         # 开国例用褒谥；其余依全程功绩；恶谥仅明显败坏或亡国
         if self.emperor_id == 1:
@@ -304,18 +362,28 @@ class EmperorMixin:
                 assist_pool = self.emperor_shifa_assist_bad
                 grade = "bad"
 
+        core_pool = self._filter_posthumous_pool(core_pool, age, reign_years)
+        assist_pool = self._filter_posthumous_pool(assist_pool, age, reign_years)
+
         candidate_pool = []
         for _ in range(80):
             core = random.choice(core_pool)
+            if not self._posthumous_age_ok(core, age, reign_years):
+                continue
             use_assist = random.random() < 0.45
             if use_assist:
                 assist = random.choice(assist_pool)
-                if assist != core:
+                if assist != core and self._posthumous_age_ok(assist, age, reign_years):
                     candidate_pool.append(f"{core}{assist}皇帝")
             candidate_pool.append(f"{core}皇帝")
 
-        # 极盛之治可上美谥长号
-        if grade == "good" and merit >= 14 and eval_result["reign_years"] >= 15:
+        # 极盛之治可上美谥长号（须在位日久，且非幼冲短祚）
+        if (
+            grade == "good"
+            and merit >= 14
+            and reign_years >= 15
+            and age >= 30
+        ):
             candidate_pool.extend([
                 "文武圣德皇帝",
                 "睿文广孝皇帝",
@@ -326,7 +394,10 @@ class EmperorMixin:
 
         unique_candidate = None
         for candidate in candidate_pool:
-            if candidate not in self.used_shihao:
+            body = candidate.replace("皇帝", "")
+            if candidate not in self.used_shihao and self._posthumous_age_ok(
+                body, age, reign_years
+            ):
                 unique_candidate = candidate
                 break
 
@@ -334,12 +405,16 @@ class EmperorMixin:
             if grade == "good":
                 fallback_core = "文"
             elif grade == "bad":
-                fallback_core = "哀"
+                # 长君恶谥用哀/厉，不用殇少冲
+                fallback_core = "哀" if age >= 25 else "殇" if age < 20 else "愍"
             else:
                 fallback_core = "恭"
             unique_candidate = f"{fallback_core}皇帝"
+            mid_assists = ["安", "简", "昭"]
+            if age < 45:
+                mid_assists.append("悼")
             while unique_candidate in self.used_shihao:
-                unique_candidate = f"{fallback_core}{random.choice(['安', '简', '昭', '悼'])}皇帝"
+                unique_candidate = f"{fallback_core}{random.choice(mid_assists)}皇帝"
 
         self.used_shihao.append(unique_candidate)
         self.shihao = unique_candidate
@@ -554,4 +629,3 @@ class EmperorMixin:
         self.emperor_id += 1
         self.ongame = True
         self.update_ui()
-

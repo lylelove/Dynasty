@@ -90,6 +90,7 @@ main.py
 | [10-emperor.md](./10-emperor.md) | `mixins/emperor.py` | 皇帝与登基 |
 | [11-dynasty-logic.md](./11-dynasty-logic.md) | `mixins/dynasty_logic.py` | 国祚与开局/重开 |
 | [12-app.md](./12-app.md) | `dynasty/app.py` | 主窗口与 UI |
+| [13-history-prompt.md](./13-history-prompt.md) | `mixins/history_prompt.py` | AI 国史提示词生成 |
 
 ## 入口与兼容
 

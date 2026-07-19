@@ -49,6 +49,7 @@
 | `used_shihao` / `used_miaohao` | 已用谥号、庙号 |
 | `used_emperor_names` / `used_person_names` | 已用帝名、人名 |
 | `used_nianhao` | 已用年号（仅确认登基/改元时登记） |
+| `used_zunhao` | 已用尊号（`generate_zunhao` 查重，防编年归档撞号） |
 
 并调用 `init_tang_resources()` 加载资源。年号结构化数据见 `dynasty/nianhao_data.py`。
 

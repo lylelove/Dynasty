@@ -233,7 +233,12 @@ class FamilyMixin:
 
         keep = set()
         for p in self.people:
-            if p.is_alive or p.miaohao or p.id in (self.current_emperor_pid, self.next_emperor_pid):
+            if (
+                p.is_alive
+                or p.miaohao
+                or p.title_name
+                or p.id in (self.current_emperor_pid, self.next_emperor_pid)
+            ):
                 keep.add(p.id)
             elif p.title in ("皇帝", "太子"):
                 keep.add(p.id)
@@ -374,4 +379,3 @@ class FamilyMixin:
 
                 if is_emperor and len(existing_sons) == 0 and random.random() < 0.12:
                     self.try_spawn_child(p, 1)
-

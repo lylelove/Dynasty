@@ -46,7 +46,7 @@
 
 ### `generate_zunhao()`
 
-从 `emperor_zunhao_pool` 抽两段拼接 +「皇帝」。
+从 `emperor_zunhao_pool` 抽两段拼接 +「皇帝」，并以 `used_zunhao` 局内查重（编年事件曾按尊号归档，撞号会致事件张冠李戴）；二段组合耗尽时退化为三段。
 
 ---
 

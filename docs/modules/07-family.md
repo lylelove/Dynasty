@@ -50,8 +50,8 @@
 | 方法 | 作用 |
 |------|------|
 | `people_by_id` / `get_person_by_id` | O(1) 查人 |
-| `is_important_person` | 在世、帝系、有爵/谥庙号等 |
-| `prune_unimportant_people` | 人数 ≥ `PRUNE_THRESHOLD`(180) 时删无关已故支系，保留祖先链 |
+| `is_important_person` | 在世、帝系、谥庙号等展示所需人物 |
+| `prune_unimportant_people` | 人数 ≥ `PRUNE_THRESHOLD`(100) 时删无关已故支系，保留祖先链及历代封国持有者 |
 
 ---
 

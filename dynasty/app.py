@@ -188,10 +188,17 @@ class DynastyApp(
         self.start_btn.clicked.connect(self.start_game_from_ui)
 
     def start_game_from_ui(self):
+        self.zibei_poem = self.zibei_combo.currentText().strip() or self.zibei_options[0]
+        if not self.dynasty_input.text().strip():
+            self.dynasty_change_name()
+        if not self.emperor_input.text().strip():
+            self.emperor_change_name()
+        if not self.year_number_input.text().strip():
+            self.yearNumber_change_name()
+
         self.dynasty = self.dynasty_input.text()
         self.emperor = self.emperor_input.text()
         self.yearNumber = self.year_number_input.text()
-        self.zibei_poem = self.zibei_combo.currentText().strip() or self.zibei_options[0]
         self.gamestart()
 
     def achange(self, value):
@@ -210,6 +217,13 @@ class DynastyApp(
         self.gamemin_family_aging_death()
         self.gamemin_emperor()
         self.gamemin_dynasty()
+        if not self.ongame:
+            self.update_ui()
+            return
+
+        if self.emperor_die and self.next_emperor_pid is not None:
+            self.auto_accession()
+
         self.gamemin_family_marriage_birth()
         self.update_crown_prince() # Calls update_heirs internally
         self.gamemin_family_shihao_titles()
@@ -1042,4 +1056,3 @@ class DynastyApp(
             if self.auto_run:
                 n = len(self.people)
                 self.timer.setInterval(900 if n > 150 else (700 if n > 100 else 500))
-

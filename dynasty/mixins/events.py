@@ -24,6 +24,7 @@ class EventsMixin:
         event_dict = {
             "time": self.d_time,
             "emperor": self.d_emperor,
+            "emperor_id": self.emperor_id,
             "event": self.d_event,
         }
         self.event_happened.append(event_dict)
@@ -60,6 +61,7 @@ class EventsMixin:
             change_event = {
                 "time": self.d_time,
                 "emperor": self.d_emperor,
+                "emperor_id": self.emperor_id,
                 "event": nh.gaiyuan_event_text(old_name, self.yearNumber, self.data_dynasty_hp_change),
             }
             self.event_happened.append(change_event)

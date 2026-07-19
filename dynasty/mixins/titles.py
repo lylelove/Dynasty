@@ -114,11 +114,35 @@ class TitlesMixin:
                 return suffix_map[father.title_rank]
         return "世子"
 
+    def _family_posthumous_age_ok(self, token, age):
+        """宗室谥字是否与享年相称：殇仅幼殇，冲仅幼冲，悼不宜高寿。"""
+        if not token:
+            return True
+        age = age or 0
+        if "殇" in token:
+            return age < 20
+        if "少" in token:
+            return age < 25
+        if "沖" in token or "冲" in token:
+            return age < 18
+        if "悼" in token:
+            return age < 45
+        return True
+
+    def _pick_family_posthumous(self, pool, age, fallback="恭"):
+        eligible = [w for w in pool if self._family_posthumous_age_ok(w, age)]
+        if not eligible:
+            eligible = [w for w in pool if "殇" not in w and "少" not in w and "冲" not in w and "沖" not in w]
+        if not eligible:
+            return fallback
+        return random.choice(eligible)
+
     def choose_family_posthumous_word(self, person):
         context_score = person.ability
-        if person.age >= 60:
+        age = person.age or 0
+        if age >= 60:
             context_score += 2
-        elif person.age < 20:
+        elif age < 20:
             context_score -= 2
 
         if person.has_title:
@@ -135,26 +159,32 @@ class TitlesMixin:
         if self.dynasty_hp < 25:
             context_score -= 1
 
-        if person.age < 8:
+        # 幼殇专用：未成童而夭
+        if age < 8:
             return random.choice(["殇", "悼"])
         if person.title == "太子":
             pool = self.taizi_shihao_good if context_score >= 8 else self.taizi_shihao_neutral
             if context_score <= 3:
                 pool = self.taizi_shihao_bad
-            return random.choice(pool)
+            return self._pick_family_posthumous(pool, age, fallback="悼" if age < 45 else "愍")
 
         if context_score >= 8:
-            core = random.choice(self.prince_shihao_good)
+            pool = self.prince_shihao_good
         elif context_score >= 4:
-            core = random.choice(self.prince_shihao_neutral)
+            pool = self.prince_shihao_neutral
         else:
-            core = random.choice(self.prince_shihao_bad)
+            pool = self.prince_shihao_bad
+
+        core = self._pick_family_posthumous(pool, age, fallback="恭")
 
         # 亲王/郡王且非恶谥：有几率得双字谥（如「恭靖」「庄宪」），仿唐宋宗王
         if person.title_rank in (1, 2) and context_score >= 4 and random.random() < 0.35:
-            assist = random.choice(self.prince_shihao_assist)
-            if assist != core:
-                return f"{core}{assist}"
+            assist_pool = [
+                a for a in self.prince_shihao_assist
+                if a != core and self._family_posthumous_age_ok(a, age)
+            ]
+            if assist_pool:
+                return f"{core}{random.choice(assist_pool)}"
         return core
 
     def build_family_posthumous_title(self, person):

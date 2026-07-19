@@ -34,35 +34,59 @@ class NamingMixin:
         return poem[idx]
 
     def generate_given_name(self, gender="M", generation=None, use_zibei=True):
-        """生成男名。宗室（use_zibei=True 且有代数）按字辈取名。"""
+        """生成姓名。宗室（use_zibei=True 且有代数）按字辈取名。"""
+        is_male = gender == "M"
+        name_chars = self.zibei_name_chars_male if is_male else self.zibei_name_chars_female
+        single_names = self.tang_male_given_single if is_male else self.tang_female_given_single
+        double_names = self.tang_male_given_double if is_male else self.tang_female_given_double
         if use_zibei and generation is not None and self.zibei_poem:
             zibei = self.get_zibei_char(generation)
             # 双名为主：字辈 + 名用字；少量单名用字辈本身
             if random.random() < 0.12:
                 return zibei
-            second = random.choice(self.zibei_name_chars_male)
-            if second == zibei and len(self.zibei_name_chars_male) > 1:
-                second = random.choice([c for c in self.zibei_name_chars_male if c != zibei])
+            second = random.choice(name_chars)
+            if second == zibei and len(name_chars) > 1:
+                second = random.choice([c for c in name_chars if c != zibei])
             return zibei + second
 
         if random.random() < 0.35:
-            return random.choice(self.tang_male_given_single)
-        return random.choice(self.tang_male_given_double)
+            return random.choice(single_names)
+        return random.choice(double_names)
 
     def generate_zunhao(self):
-        """组合两段尊号碎片，生成如『圣神文武皇帝』的风味化尊号。"""
+        """组合两段尊号碎片，生成如『圣神文武皇帝』的风味化尊号。
+
+        局内查重：编年事件按尊号归入各帝名下，同朝撞号会致事件张冠李戴。
+        """
         pool = list(self.emperor_zunhao_pool)
         if len(pool) < 2:
             return "皇帝"
-        frags = random.sample(pool, 2)
-        return "".join(frags) + "皇帝"
+        used = getattr(self, "used_zunhao", None)
+        if used is None:
+            used = self.used_zunhao = []
+        for _ in range(60):
+            frags = random.sample(pool, 2)
+            candidate = "".join(frags) + "皇帝"
+            if candidate not in used:
+                used.append(candidate)
+                return candidate
+        # 二段组合耗尽（极长局）：改用三段组合兜底
+        for _ in range(60):
+            frags = random.sample(pool, 3)
+            candidate = "".join(frags) + "皇帝"
+            if candidate not in used:
+                used.append(candidate)
+                return candidate
+        return "".join(random.sample(pool, 2)) + "皇帝"
 
     def generate_full_name(self, gender="M", surname=None, generation=None, use_zibei=True):
         family_name = surname if surname else random.choice(self.tang_surnames)
         attempts = 0
         max_attempts = 800
         while attempts < max_attempts:
-            given_name = self.generate_given_name(generation=generation, use_zibei=use_zibei)
+            given_name = self.generate_given_name(
+                gender=gender, generation=generation, use_zibei=use_zibei
+            )
             candidate = family_name + given_name
             if not self.is_name_used(candidate):
                 return candidate
@@ -71,14 +95,17 @@ class NamingMixin:
         # 字辈库耗尽时：字辈 + 随机双字，再不行加数字后缀
         zibei = self.get_zibei_char(generation) if (use_zibei and generation is not None) else ""
         for _ in range(400):
-            tail = random.choice(self.zibei_name_chars_male) + random.choice(self.zibei_name_chars_male)
+            name_chars = self.zibei_name_chars_male if gender == "M" else self.zibei_name_chars_female
+            tail = random.choice(name_chars) + random.choice(name_chars)
             candidate = family_name + (zibei + tail if zibei else tail)
             if not self.is_name_used(candidate):
                 return candidate
 
         suffix = 1
         while True:
-            given_name = self.generate_given_name(generation=generation, use_zibei=use_zibei)
+            given_name = self.generate_given_name(
+                gender=gender, generation=generation, use_zibei=use_zibei
+            )
             candidate = f"{family_name}{given_name}{suffix}"
             if not self.is_name_used(candidate):
                 return candidate
@@ -86,6 +113,7 @@ class NamingMixin:
 
     def get_random_name(self, gender="M", generation=None):
         name = self.generate_full_name(
+            gender=gender,
             surname=self.emperor_firstname,
             generation=generation,
             use_zibei=True,
@@ -157,29 +185,6 @@ class NamingMixin:
         self.yearNumber = self.get_unique_nianhao(reason=nh.REASON_REFRESH)
         self.year_number_input.setText(self.yearNumber)
 
-    def dialog_yearNumber_change_name(self):
-        # 仅预览，确认登基时再 commit
-        self.yearNumber = self.get_unique_nianhao(reason=nh.REASON_ACCESSION)
-        self.dialog_year_input.setText(self.yearNumber)
-
     def suggest_accession_nianhao(self):
         """新君登基默认新年号（不继承前帝）。"""
         return self.get_unique_nianhao(reason=nh.REASON_ACCESSION)
-
-    def emperor_change_name_after(self):
-        # 新君改名：按继位者代数取字辈（无继位者则按当前代数+1）
-        gen = 1
-        if self.next_emperor_pid:
-            succ = self.get_person_by_id(self.next_emperor_pid)
-            if succ:
-                gen = succ.generation
-        while True:
-            self.emperor_lastname = self.generate_given_name("M", generation=gen, use_zibei=True)
-            candidate = self.emperor_firstname + self.emperor_lastname
-            if candidate not in self.used_emperor_names and not self.is_name_used(candidate):
-                self.emperor = candidate
-                self.used_emperor_names.append(candidate)
-                self.register_person_name(candidate)
-                break
-        self.dialog_emp_input.setText(self.emperor)
-
