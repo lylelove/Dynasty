@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""王朝 V0.18 入口：启动 PySide6 主窗口。
+"""王朝 V1.00 入口：启动 PySide6 主窗口。
 
 详细模块说明见 docs/modules/。
 """

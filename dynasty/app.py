@@ -42,7 +42,7 @@ class DynastyApp(
 
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("王朝 V0.18")
+        self.setWindowTitle("王朝 V1.00")
         self.resize(1000, 700)
 
         # Initialize Game State
@@ -130,9 +130,9 @@ class DynastyApp(
         self.end_game_dialog.rejected.connect(self.enter_history_browse_mode)
 
     def enter_history_browse_mode(self):
-        """亡国后翻阅国史：主界面下方按钮切换为单个「重新开始」。"""
+        """亡国后翻阅国史：主界面下方显示「重新开始」与「一键导出国史提示词」。"""
         self.auto_run_btn.hide()
-        self.export_prompt_btn.hide()
+        self.export_prompt_btn.show()
         self.restart_btn.show()
 
     def exit_history_browse_mode(self):

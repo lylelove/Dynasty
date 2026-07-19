@@ -59,7 +59,7 @@ MRO 保证：业务方法来自各 Mixin；窗口基类为 `QMainWindow`。
 
 自动运行时：新皇对话框自动刷新并确认；结束时会停自动运行。
 
-**翻阅国史模式**：结束弹窗以「翻阅国史」或 X 关闭后（`rejected` → `enter_history_browse_mode`），主界面 Tab1 下方的「自动运行」「一键导出国史提示词」隐藏，换成单个「重新开始」（连 `dio2`）；`dio2` 里 `exit_history_browse_mode` 恢复原按钮。
+**翻阅国史模式**：结束弹窗以「翻阅国史」或 X 关闭后（`rejected` → `enter_history_browse_mode`），主界面 Tab1 下方隐藏「自动运行」，显示「重新开始」与「一键导出国史提示词」；`dio2` 里 `exit_history_browse_mode` 恢复为「自动运行」+「一键导出国史提示词」。
 
 ---
 
