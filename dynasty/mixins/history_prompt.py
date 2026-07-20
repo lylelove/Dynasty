@@ -353,7 +353,7 @@ class HistoryPromptMixin:
         collect = getattr(self, "collect_fiefs", None)
         if collect is None:
             return
-        fiefs = [f for f in collect() if f.get("rank") in (1, 2, 3)]
+        fiefs = [f for f in collect() if f.get("rank") in (1, 2)]
         if not fiefs:
             return
 

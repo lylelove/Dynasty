@@ -106,7 +106,7 @@ main.py
 | 国祚衰减公式 | `mixins/dynasty_logic.py` → `gamemin_dynasty` |
 | 事件文案与数值 | `state.py` 中 `event_list` |
 | 姓名字库 / 字辈诗 | `resources.py` → `init_tang_resources` |
-| 爵位等级与封号名 | `resources.py` 九等爵 + `mixins/titles.py` 命名 |
+| 爵位等级与封号名 | `resources.py` 明制八等 + `mixins/titles.py` 命名 |
 | 庙号谥号规则 | `mixins/emperor.py` → `gamemin_shihao` |
 | 界面布局 / 新 Tab | `app.py` → `setup_main_game_screen` |
 | 主题颜色 | `styles.py` → `apply_stylesheet` |

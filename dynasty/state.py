@@ -110,7 +110,7 @@ class GameStateMixin:
             {"time": "", "event": "边将轻骑深入敌境，虽获首级甚众，亦折损精锐。", "emperor_hp_change": -1, "dynasty_hp_change": -2},
             # 宗室、礼制与文化：为纪事和国史提示词提供人物化钩子
             {"time": "", "event": "太子释奠国学，亲临讲席，士林以为储君知礼。", "emperor_hp_change": 1, "dynasty_hp_change": 3},
-            {"time": "", "event": "宗室请封过滥，朝廷裁定降等承袭以省国费。", "emperor_hp_change": -1, "dynasty_hp_change": 2},
+            {"time": "", "event": "宗室蕃衍，岁禄浩繁，有司请裁将军中尉禄米。", "emperor_hp_change": -1, "dynasty_hp_change": 2},
             {"time": "", "event": "礼官议定郊祀新仪，旧贵族与新进士人争论不休。", "emperor_hp_change": 0, "dynasty_hp_change": 1},
             {"time": "", "event": "翰林院编成实录，前朝旧闻与宫门秘档得以保存。", "emperor_hp_change": 0, "dynasty_hp_change": 3},
             {"time": "", "event": "佛寺广置庄田，御史上疏请核免税田亩，僧俗相持。", "emperor_hp_change": -1, "dynasty_hp_change": -2},

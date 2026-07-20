@@ -39,14 +39,16 @@ class SuccessionMixin:
         return None
 
     def update_heirs(self):
-        # 每位有爵/皇帝：嫡长（含代位）为世子——长子在则长子，长子已故则长子一系代位
+        # 明制：仅皇帝与亲王/郡王有储贰（皇太子、王世子、王长子）；
+        # 将军中尉无封国无承袭，不标世子
         # 先清空在世者旧标记（已故者保留，供当年身后谥号用），再重标正统
         for p in self.people:
             if p.is_alive:
                 p.is_heir = False
         for p in self.people:
             is_current_emperor = (p.id == self.current_emperor_pid)
-            if p.gender == "M" and ((p.is_alive and p.has_title) or is_current_emperor):
+            has_fief = p.is_alive and p.has_title and p.title_rank in (1, 2)
+            if p.gender == "M" and (has_fief or is_current_emperor):
                 rightful = self.find_heir_of_line(p)
                 if rightful and rightful.is_alive:
                     rightful.is_heir = True

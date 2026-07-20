@@ -44,8 +44,8 @@ class Person:
         self.children = []
         self.title = "" # Full display title
         self.title_name = "" # e.g. "晋", "齐", "楚"
-        # 爵等（唐制九等）：0=帝室/无爵
-        # 1亲王 2郡王 3国公 4开国郡公 5开国县公 6开国县侯 7开国县伯 8开国县子 9开国县男
+        # 爵等（明制宗藩八等）：0=帝室/无爵
+        # 1亲王 2郡王 3镇国将军 4辅国将军 5奉国将军 6镇国中尉 7辅国中尉 8奉国中尉
         self.title_rank = 0
         self.is_heir = False # Whether this person is the designated heir of their father's rank
         self.has_title = False # Whether they actively hold the rank (true if father is dead or they are independent)

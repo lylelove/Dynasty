@@ -1,23 +1,26 @@
 # -*- coding: utf-8 -*-
-"""爵位/封号抽取、在世称号格式化、宗室谥号与封爵继承（唐制九等爵）。"""
+"""爵位/封号抽取、在世称号格式化、宗室谥号与封爵继承（明制宗藩）。"""
 import random
 
 
 class TitlesMixin:
     """爵位/封号抽取、在世称号格式化、宗室谥号与封爵继承。
 
-    唐制爵等（title_rank）：
-      1 亲王（称「某王」）  2 郡王  3 国公  4 开国郡公
-      5 开国县公  6 开国县侯  7 开国县伯  8 开国县子  9 开国县男
+    明制宗藩爵等（title_rank）：
+      1 亲王（称「某王」，世袭罔替）  2 郡王（双字封号，世袭罔替）
+      3 镇国将军  4 辅国将军  5 奉国将军
+      6 镇国中尉  7 辅国中尉  8 奉国中尉（世代皆奉国中尉，不再降）
+    亲王/郡王嫡长袭爵不降等，余子降一等；将军中尉诸子皆降一等，无封号不承袭。
     """
 
-    # 可独立授封并承袭的爵等上限（县伯及以上世子称谓；子男亦承袭）
-    RANK_MAX = 9
-    # 有「世子」正式称谓的爵等（王、公）
-    HEIR_TITLE_RANKS = (1, 2, 3, 4, 5)
+    # 明制八等；仅亲王/郡王有封号并可承袭
+    RANK_MAX = 8
+    FIEF_RANKS = (1, 2)
+    # 有「世子/长子」正式称谓的爵等（亲王世子、郡王长子）
+    HEIR_TITLE_RANKS = (1, 2)
 
     def get_rank_suffix(self, rank):
-        """封号后缀：亲王用「王」，其余用郡王/国公/县侯等。"""
+        """封号后缀：亲王/郡王皆称「王」，将军中尉即职名。"""
         return self.rank_suffix_map.get(rank, "爵")
 
     def get_rank_label(self, rank):
@@ -31,48 +34,41 @@ class TitlesMixin:
     def get_rank_short(self, rank):
         """宗藩列表等紧凑显示。"""
         short = {
-            1: "王", 2: "郡王", 3: "国公", 4: "郡公", 5: "县公",
-            6: "侯", 7: "伯", 8: "子", 9: "男",
+            1: "亲王", 2: "郡王", 3: "镇国将军", 4: "辅国将军",
+            5: "奉国将军", 6: "镇国中尉", 7: "辅国中尉", 8: "奉国中尉",
         }
         return short.get(rank, "—")
 
     def format_enfeoffed_title(self, title_name, rank, shihao=""):
         """
-        拼在世/谥号称号。
-        唐制亲王：秦王 / 秦恭王（非「秦亲王」）
-        郡王：彭城郡王
-        国公以下：英国公、长乐郡公、武安县公…
+        拼在世/谥号称号（明制）。
+        亲王：秦王 / 秦愍王
+        郡王：永兴王 / 永兴恭定王
+        将军中尉：无封号，直接返回职名（不加谥）。
         """
-        if not title_name:
-            return ""
-        suffix = self.get_rank_suffix(rank)
-        if rank == 1:
-            # 亲王：国号 + [谥] + 王
+        if rank in self.FIEF_RANKS:
+            if not title_name:
+                return ""
+            suffix = self.get_rank_suffix(rank)
             return f"{title_name}{shihao}{suffix}" if shihao else f"{title_name}{suffix}"
-        if rank == 3:
-            # 国公：国号 + [谥] + 国公（封号本身是国名时不重复「国」）
-            if title_name.endswith("国"):
-                base = f"{title_name}{shihao}公" if shihao else f"{title_name}公"
-            else:
-                base = f"{title_name}{shihao}国公" if shihao else f"{title_name}国公"
-            return base
-        if rank in (4, 5, 6, 7, 8, 9):
-            # 郡公/县公侯伯子男：地名 + [谥] + 爵称
-            return f"{title_name}{shihao}{suffix}" if shihao else f"{title_name}{suffix}"
-        # 郡王等
-        return f"{title_name}{shihao}{suffix}" if shihao else f"{title_name}{suffix}"
+        if 3 <= rank <= self.RANK_MAX:
+            return self.get_rank_label(rank)
+        return ""
 
     def get_guobie(self, person):
-        """皇亲国戚的国别（封国）。皇帝（含已崩者）归皇室，受封者归其封国，未受封者标未封。"""
+        """皇亲国戚的国别。皇帝归皇室；王爵归其封国；将军中尉归所属王府支系。"""
         if (person.id == self.current_emperor_pid or person.title == "皇帝"
                 or person.title == "太子" or person.miaohao):
             return "皇室"
         if person.title_name:
             return person.title_name
+        branch = self.get_clan_branch(person)
+        if branch:
+            return branch
         return "未封"
 
     def draw_title_name(self, rank):
-        if rank <= 0 or rank > self.RANK_MAX:
+        if rank not in self.FIEF_RANKS:
             return ""
         pool = self.available_title_pools.get(rank, [])
         if pool:
@@ -90,6 +86,9 @@ class TitlesMixin:
             return "太子"
         if person.has_title and person.title_name:
             return self.format_enfeoffed_title(person.title_name, person.title_rank)
+        # 将军中尉无封号，授爵后直接以职名相称
+        if person.has_title and 3 <= person.title_rank <= self.RANK_MAX:
+            return self.get_rank_label(person.title_rank)
         if person.is_heir:
             father = self.get_person_by_id(person.father_id)
             if father and father.title_name and father.title_rank in self.HEIR_TITLE_RANKS:
@@ -99,19 +98,14 @@ class TitlesMixin:
         return ""
 
     def get_heir_posthumous_suffix(self, father):
-        """唐制：亲王嫡子称「某王世子」，郡王/国公亦称世子；皇子为皇太子。"""
+        """明制：皇子为皇太子；亲王嫡长称「某王世子」；郡王嫡长称「某王长子」。"""
         if father:
             if father.id == self.current_emperor_pid:
                 return "皇太子"
-            suffix_map = {
-                1: "王世子",
-                2: "郡王世子",
-                3: "国公世子",
-                4: "郡公世子",
-                5: "县公世子",
-            }
-            if father.title_rank in suffix_map:
-                return suffix_map[father.title_rank]
+            if father.title_rank == 1:
+                return "王世子"
+            if father.title_rank == 2:
+                return "王长子"
         return "世子"
 
     def _family_posthumous_age_ok(self, token, age):
@@ -177,8 +171,8 @@ class TitlesMixin:
 
         core = self._pick_family_posthumous(pool, age, fallback="恭")
 
-        # 亲王/郡王且非恶谥：有几率得双字谥（如「恭靖」「庄宪」），仿唐宋宗王
-        if person.title_rank in (1, 2) and context_score >= 4 and random.random() < 0.35:
+        # 明制：亲王一字谥（秦愍王）；郡王例用双字谥（永兴恭定王）
+        if person.title_rank == 2:
             assist_pool = [
                 a for a in self.prince_shihao_assist
                 if a != core and self._family_posthumous_age_ok(a, age)
@@ -204,72 +198,104 @@ class TitlesMixin:
             return f"{chosen_shihao}{suffix}"
         return ""
 
-    def gamemin_family_shihao_titles(self):
-        for p in self.people:
-            # 唐制：男子年十五以上可授爵；世子成年前不另封，承袭后 has_title
-            if (
-                p.is_alive
-                and p.gender == "M"
-                and p.age >= 15
-                and not p.title_name
-                and p.id != self.current_emperor_pid
-                and 1 <= p.title_rank <= self.RANK_MAX
-            ):
-                if not p.is_heir or (p.is_heir and p.has_title):
-                    if not p.has_title:
-                        p.title_name = self.draw_title_name(p.title_rank)
-                        if p.title_name:
-                            p.has_title = True
+    def _grant_initial_titles(self):
+        """成年授爵（明制年十岁受封，游戏取 10 岁）。
 
+        - 亲王/郡王：非世子者抽封号开府；世子不另封，待承袭
+        - 将军中尉：无封号，直接授职
+        """
+        for p in self.people:
+            if (
+                not p.is_alive
+                or p.gender != "M"
+                or p.age < 10
+                or p.has_title
+                or p.id == self.current_emperor_pid
+                or not (1 <= p.title_rank <= self.RANK_MAX)
+            ):
+                continue
+
+            if p.title_rank in self.FIEF_RANKS:
+                # 王世子/王长子不另封，等袭父爵
+                if p.is_heir:
+                    continue
+                if not p.title_name:
+                    p.title_name = self.draw_title_name(p.title_rank)
+                if p.title_name:
+                    p.has_title = True
+            else:
+                # 将军中尉：即授职名
+                p.has_title = True
+
+    def _inherit_fief(self, deceased):
+        """王府承袭（仅亲王/郡王）：嫡长（含代位）袭同封同爵（世袭罔替）；
+        无后则过继侄嗣承封；再无则除国、封号还池。"""
+        # 现任皇帝/储君不得承袭藩爵（其支系跳过）
+        exclude = {
+            pid for pid in (self.current_emperor_pid, self.next_emperor_pid)
+            if pid is not None
+        }
+        heir = self.find_heir_of_line(deceased, exclude_ids=exclude)
+        if heir and heir.id == deceased.id:
+            heir = None
+
+        if heir:
+            self._transfer_fief(deceased, heir)
+            return
+
+        adoptee = self.find_adoptee(deceased)
+        if adoptee:
+            # 过继入嗣：改父系与子女链，使代位/绝嗣/世系树一致
+            self.apply_adoption(deceased, adoptee)
+            deceased.extinct = False
+            if deceased.title_name:
+                self._transfer_fief(deceased, adoptee)
+            return
+
+        deceased.extinct = self.check_extinct(deceased.id)
+        if deceased.title_name:
+            self.available_title_pools.setdefault(
+                deceased.title_rank, []
+            ).append(deceased.title_name)
+            deceased.has_title = False
+
+    def _transfer_fief(self, deceased, heir):
+        """将王府封号移交承袭人；承袭人原有王府封号退还池。"""
+        if heir.has_title and heir.title_name and heir.title_name != deceased.title_name:
+            self.available_title_pools.setdefault(
+                heir.title_rank, []
+            ).append(heir.title_name)
+        heir.title_name = deceased.title_name
+        heir.title_rank = deceased.title_rank
+        heir.has_title = True
+        heir.is_heir = False  # 已袭爵为国主，不再是世子
+        deceased.has_title = False
+
+    def gamemin_family_shihao_titles(self):
+        self._grant_initial_titles()
+
+        for p in self.people:
             if p.is_alive:
                 p.title = self.format_alive_title(p)
 
             if not p.is_alive and p.death_year == self.year:
-                if not p.shihao and (p.has_title or p.is_heir or p.title == "太子"):
+                # 谥号：太子、亲王、郡王及王世子/王长子；将军中尉无谥
+                if not p.shihao and (
+                    p.title == "太子"
+                    or (p.has_title and p.title_rank in self.FIEF_RANKS)
+                    or (p.is_heir and self._heir_of_fief(p))
+                ):
                     p.shihao = self.build_family_posthumous_title(p)
 
-                # 封爵承袭（嫡长含代位）；无后过继；再无则绝封还池
-                if p.gender == "M" and p.has_title:
-                    # 现任皇帝/储君不得承袭藩爵（其支系跳过）
-                    exclude = {
-                        pid for pid in (self.current_emperor_pid, self.next_emperor_pid)
-                        if pid is not None
-                    }
-                    heir = self.find_heir_of_line(p, exclude_ids=exclude)
-                    if heir and heir.id == p.id:
-                        heir = None
+                # 封爵承袭：仅亲王/郡王世袭罔替；将军中尉身故无承袭
+                if p.gender == "M" and p.has_title and p.title_rank in self.FIEF_RANKS:
+                    self._inherit_fief(p)
 
-                    if heir:
-                        # 世子若已有私封，先退还池再承袭父爵，避免封号丢失
-                        if heir.has_title and heir.title_name and heir.title_name != p.title_name:
-                            self.available_title_pools.setdefault(
-                                heir.title_rank, []
-                            ).append(heir.title_name)
-                        heir.title_name = p.title_name
-                        heir.title_rank = p.title_rank
-                        heir.has_title = True
-                        heir.is_heir = False  # 已承袭为国主，不再是世子
-                        p.has_title = False
-                    else:
-                        adoptee = self.find_adoptee(p)
-                        if adoptee:
-                            # 过继入嗣：改父系与子女链，使代位/绝嗣/世系树一致
-                            self.apply_adoption(p, adoptee)
-                            p.extinct = False
-                            if p.title_name:
-                                # 嗣子承封；若本有私封则退还池后再承嗣父之封
-                                if adoptee.has_title and adoptee.title_name:
-                                    self.available_title_pools.setdefault(
-                                        adoptee.title_rank, []
-                                    ).append(adoptee.title_name)
-                                adoptee.title_name = p.title_name
-                                adoptee.title_rank = p.title_rank
-                                adoptee.has_title = True
-                                p.has_title = False
-                        else:
-                            p.extinct = self.check_extinct(p.id)
-                            if p.title_name:
-                                self.available_title_pools.setdefault(
-                                    p.title_rank, []
-                                ).append(p.title_name)
-                                p.has_title = False
+    def _heir_of_fief(self, person):
+        """是否为亲王/郡王（或皇帝）之储贰，身后可得世子/长子谥。"""
+        father = self.get_person_by_id(person.father_id)
+        if not father:
+            return False
+        if father.id == self.current_emperor_pid:
+            return True
+        return father.title_rank in self.HEIR_TITLE_RANKS and bool(father.title_name)

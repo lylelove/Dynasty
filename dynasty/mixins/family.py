@@ -7,12 +7,11 @@ from dynasty.models import Person
 class FamilyMixin:
     """宗室人物查询、衰老死亡、婚育、过继、封国汇总。"""
 
-    # 人物过多时裁剪；仅亲王/郡王（rank≤2）可繁衍；在世过多时进一步收紧
-    PRUNE_THRESHOLD = 100
-    BREED_RANK_MAX = 2
+    # 人物过多时裁剪；明制全体成年宗室可育，生育率按爵位递减；在世过多时收紧
+    PRUNE_THRESHOLD = 160
     MAX_LIVING_SONS = 5
-    SOFT_ALIVE_CAP = 55
-    HARD_ALIVE_CAP = 90
+    SOFT_ALIVE_CAP = 80
+    HARD_ALIVE_CAP = 140
 
     def get_person_by_id(self, pid):
         if pid is None:
@@ -308,39 +307,68 @@ class FamilyMixin:
         return holders[0]
 
     def try_spawn_child(self, father, child_rank):
-        # 仅男系：唐制九等 1 亲王 … 9 县男；超出不再授爵
-        if child_rank > 9:
-            return
-
+        # 仅男系：明制八等 1 亲王 … 8 奉国中尉；奉国中尉之子仍为奉国中尉
         child_gen = father.generation + 1
         child_name = self.get_random_name("M", generation=child_gen)
         child = Person(self.next_pid, child_name, "M", self.year, father.id, None, child_gen)
-        child.title_rank = max(0, min(int(child_rank), 9))
+        child.title_rank = max(0, min(int(child_rank), 8))
 
         self._register_person(child)
         father.children.append(child.id)
         self.next_pid += 1
 
+    def child_rank_for(self, father, existing_son_count):
+        """明制子嗣爵位：
+        - 皇子皆亲王
+        - 亲王/郡王：长子袭本爵（预定世子/长子），余子降一等
+        - 将军中尉：诸子皆降一等，至奉国中尉不再降
+        """
+        if father.id == self.current_emperor_pid:
+            return 1
+        rank = father.title_rank
+        if rank in (1, 2):
+            if existing_son_count == 0:
+                return rank
+            return rank + 1
+        return min(rank + 1, 8)
+
+    def get_clan_branch(self, person):
+        """沿父系上溯至最近的亲王/郡王封号（将军中尉所属王府支系）。"""
+        cur = self.get_person_by_id(person.father_id) if person else None
+        seen = set()
+        while cur is not None and cur.id not in seen:
+            seen.add(cur.id)
+            if cur.title_name and cur.title_rank in (1, 2):
+                return cur.title_name
+            cur = self.get_person_by_id(cur.father_id)
+        return ""
+
     def gamemin_family_marriage_birth(self):
-        """男系繁衍：不生成女性与配偶，仅按年龄生育皇子/宗子。"""
+        """男系繁衍（明制）：全体成年宗室可育，生育率按爵位递减。"""
         alive_count = sum(1 for p in self.people if p.is_alive)
-        # 在世过多：只许皇帝生育，避免指数膨胀
-        only_emperor = alive_count >= self.HARD_ALIVE_CAP
+        # 在世过多：仅皇帝与王爵可育，避免指数膨胀
+        royals_only = alive_count >= self.HARD_ALIVE_CAP
         dampen = alive_count >= self.SOFT_ALIVE_CAP
+
+        # 生育基础概率：皇帝 > 亲王 > 郡王 > 将军 > 中尉
+        rank_chance = {
+            1: 0.12, 2: 0.08,
+            3: 0.05, 4: 0.05, 5: 0.05,
+            6: 0.03, 7: 0.03, 8: 0.03,
+        }
 
         for p in self.people:
             if not p.is_alive or p.gender != "M":
                 continue
 
             is_emperor = (p.id == self.current_emperor_pid)
-            if only_emperor and not is_emperor:
-                continue
-
-            # 仅亲王/郡王（及皇帝）繁衍；未实封的低爵不育
             if not is_emperor:
-                if p.title_rank <= 0 or p.title_rank > self.BREED_RANK_MAX:
+                # 宗室须已受封（或为待袭之世子/长子）方开府生育
+                if p.title_rank <= 0 or p.title_rank > 8:
                     continue
                 if not p.has_title and not p.is_heir:
+                    continue
+                if royals_only and p.title_rank > 2:
                     continue
 
             max_age = 50 if is_emperor else 45
@@ -350,31 +378,23 @@ class FamilyMixin:
             existing_sons = [self.get_person_by_id(cid) for cid in p.children]
             existing_sons = [s for s in existing_sons if s and s.gender == "M"]
             living_sons = [s for s in existing_sons if s.is_alive]
-            son_cap = self.MAX_LIVING_SONS if is_emperor else 3
+            if is_emperor:
+                son_cap = self.MAX_LIVING_SONS
+            elif p.title_rank in (1, 2):
+                son_cap = 4
+            else:
+                son_cap = 3
             if len(living_sons) >= son_cap:
                 continue
-            if not is_emperor and len(existing_sons) >= 3:
+            if not is_emperor and len(existing_sons) >= son_cap:
                 continue
 
-            if is_emperor:
-                chance = 0.3
-            elif p.title_rank == 1:
-                chance = 0.07
-            else:
-                chance = 0.04
-
+            chance = 0.3 if is_emperor else rank_chance.get(p.title_rank, 0.03)
             if dampen:
                 chance *= 0.5
 
             if random.random() < chance:
-                # 唐制：皇子皆封亲王；宗室余子降一等
-                if is_emperor:
-                    child_rank = 1
-                elif len(existing_sons) == 0:
-                    child_rank = p.title_rank
-                else:
-                    child_rank = min(p.title_rank + 1, 9)
-
+                child_rank = self.child_rank_for(p, len(existing_sons))
                 self.try_spawn_child(p, child_rank)
 
                 if is_emperor and len(existing_sons) == 0 and random.random() < 0.12:
