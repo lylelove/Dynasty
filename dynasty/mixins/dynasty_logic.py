@@ -40,6 +40,7 @@ class DynastyLogicMixin:
         self.register_person_name(self.emperor)
         self.commit_nianhao(self.yearNumber)
         self.start_new_emperor_nianhao_history()
+        self.init_court()
         self.dynasty_function_st()
         self.record_dynasty_hp_history()
         self.update_ui()
@@ -60,6 +61,8 @@ class DynastyLogicMixin:
         if self.dynasty_hp > 0:
             # Balance: Slow down dynasty decay to last ~150-300 years
             self.dynasty_hp = self.dynasty_hp - (self.amuse / 60 * 2.5 / max(1, self.emperor_ab)) + (self.hardworking / 60 * self.emperor_ab / 15)
+            # 相辅之力：贤相匡扶、庸臣蠹政（在职朝臣均能力 5 为中平，约 ±0.24/年）
+            self.dynasty_hp += (self._court_avg_ability() - 5.0) * 0.06
             self.dynasty_age += 1
 
         if self.dynasty_hp >= 100:
@@ -125,6 +128,11 @@ class DynastyLogicMixin:
         self.reign_trough_dynasty_hp = 100
         self.founder_name = ""
         self.founder_nianhao = ""
+        # 朝廷：与 init_game_state() 中的声明保持一致
+        self.ministers = []
+        self.next_minister_id = 1
+        self.court_posts = {}
+        self.shoufu_history = []
 
     def dynasty_function_st(self):
         if self.dynasty_hp >= 90:

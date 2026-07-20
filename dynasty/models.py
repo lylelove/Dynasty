@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""核心数据模型：人物 Person 与能力掷骰。"""
+"""核心数据模型：人物 Person、朝臣 Minister 与能力掷骰。"""
 import math
 import random
 
@@ -32,6 +32,11 @@ def roll_lifespan_at_birth():
     return roll_death_age()
 
 
+def roll_minister_death_age():
+    """朝臣终年：入仕时已成年，无早夭段；50–84，均值约 67，大臣多享中高寿。"""
+    return 50 + math.floor(random.random() * 35)
+
+
 class Person:
     def __init__(self, pid, name, gender, birth_year, father_id, mother_id, generation):
         self.id = pid
@@ -61,3 +66,21 @@ class Person:
         self.miaohao = "" # 庙号
         self.zunhao = "" # 尊号（风味化称谓）
 
+
+class Minister:
+    """朝臣：内阁大学士与六部尚书。独立于宗室 Person，无父系与爵位。"""
+
+    def __init__(self, mid, name, birth_year, entry_year, post):
+        self.id = mid
+        self.name = name
+        self.birth_year = birth_year
+        self.death_year = -1
+        self.entry_year = entry_year        # 入仕（就任本朝官职）之年
+        self.post = post                    # 现任官职（首辅/次辅/群辅/六部尚书）
+        self.post_since_year = entry_year   # 现职就任之年
+        self.ability = roll_ability()
+        self.death_age = roll_minister_death_age()
+        self.age = 0
+        self.is_alive = True
+        self.retired = False                # 致仕
+        # 扩展点（V2）：faction 朋党、exam_rank 科举出身

@@ -111,6 +111,17 @@ class NamingMixin:
                 return candidate
             suffix += 1
 
+    def generate_minister_name(self):
+        """朝臣取名：随机异姓（避国姓）+ 不走字辈的常规名，登记查重。"""
+        surname = random.choice(self.tang_surnames)
+        for _ in range(40):
+            if surname != self.emperor_firstname:
+                break
+            surname = random.choice(self.tang_surnames)
+        name = self.generate_full_name(gender="M", surname=surname, use_zibei=False)
+        self.register_person_name(name)
+        return name
+
     def get_random_name(self, gender="M", generation=None):
         name = self.generate_full_name(
             gender=gender,

@@ -11,6 +11,7 @@ from PySide6.QtCore import Qt, QTimer
 
 from dynasty.lineage_chart import LineageChartPanel
 from dynasty.fortune_chart import FortuneChartDialog
+from dynasty.mixins.court import ALL_POSTS, CourtMixin, post_display
 from dynasty.mixins.dynasty_logic import DynastyLogicMixin
 from dynasty.mixins.emperor import EmperorMixin
 from dynasty.mixins.events import EventsMixin
@@ -33,6 +34,7 @@ class DynastyApp(
     FamilyMixin,
     SuccessionMixin,
     EventsMixin,
+    CourtMixin,
     EmperorMixin,
     DynastyLogicMixin,
     HistoryPromptMixin,
@@ -246,6 +248,7 @@ class DynastyApp(
         self.gamemin_family_marriage_birth()
         self.update_crown_prince() # Calls update_heirs internally
         self.gamemin_family_shihao_titles()
+        self.gamemin_court()
         self.prune_unimportant_people()
         self.dynasty_function_st()
         self.update_ui()
@@ -346,6 +349,39 @@ class DynastyApp(
 
         if need_family:
             self.update_fief_list()
+
+        # 朝廷 Tab 同样节流：当前页或每 5 年刷新
+        need_court = tab_idx == 5 or (self.year % 5 == 0)
+        if need_court and hasattr(self, "court_table"):
+            self.update_court_ui()
+
+    def update_court_ui(self):
+        self.court_table.setRowCount(0)
+        for i, post in enumerate(ALL_POSTS):
+            m = self.get_post_holder(post)
+            self.court_table.insertRow(i)
+            self.court_table.setItem(i, 0, QTableWidgetItem(post_display(post)))
+            if m is None:
+                self.court_table.setItem(i, 1, QTableWidgetItem("（虚位）"))
+                for col in (2, 3, 4, 5):
+                    self.court_table.setItem(i, col, QTableWidgetItem("—"))
+                continue
+            self.court_table.setItem(i, 1, QTableWidgetItem(m.name))
+            self.court_table.setItem(i, 2, QTableWidgetItem(str(m.age)))
+            self.court_table.setItem(i, 3, QTableWidgetItem(str(m.ability)))
+            self.court_table.setItem(i, 4, QTableWidgetItem(str(self.year - m.post_since_year)))
+            self.court_table.setItem(i, 5, QTableWidgetItem(str(self.year - m.entry_year)))
+
+        self.shoufu_table.setRowCount(0)
+        for i, rec in enumerate(self.shoufu_history):
+            self.shoufu_table.insertRow(i)
+            self.shoufu_table.setItem(i, 0, QTableWidgetItem(rec["name"]))
+            self.shoufu_table.setItem(i, 1, QTableWidgetItem(str(rec["ability"])))
+            end = rec["end_year"] if rec["end_year"] is not None else self.year
+            self.shoufu_table.setItem(i, 2, QTableWidgetItem(f"在任 {max(0, end - rec['start_year'])} 年"))
+            self.shoufu_table.setItem(i, 3, QTableWidgetItem(rec["exit"] or "在任"))
+        if self.shoufu_history:
+            self.shoufu_table.scrollToBottom()
 
     def update_family_tree(self):
         tree = self.family_tree_widget
@@ -1002,12 +1038,41 @@ class DynastyApp(
         self._selected_fief_name = None
         self.fief_table.cellClicked.connect(self.on_fief_table_clicked)
 
+        # Tab 6: 朝廷（内阁六部花名册 + 历任首辅）
+        self.tab6 = QWidget()
+        tab6_layout = QVBoxLayout()
+        tab6_layout.setContentsMargins(16, 12, 16, 12)
+
+        court_section = QLabel("— 内 阁 与 六 部 —")
+        court_section.setObjectName("section_label")
+        tab6_layout.addWidget(court_section)
+        self.court_table = QTableWidget()
+        self.court_table.setEditTriggers(QAbstractItemView.NoEditTriggers)
+        self.court_table.setColumnCount(6)
+        self.court_table.setHorizontalHeaderLabels(["职位", "姓名", "年龄", "能力", "任职年数", "入仕年数"])
+        self.court_table.verticalHeader().setVisible(False)
+        self.court_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        tab6_layout.addWidget(self.court_table, 3)
+
+        shoufu_section = QLabel("— 历 任 首 辅 —")
+        shoufu_section.setObjectName("section_label")
+        tab6_layout.addWidget(shoufu_section)
+        self.shoufu_table = QTableWidget()
+        self.shoufu_table.setEditTriggers(QAbstractItemView.NoEditTriggers)
+        self.shoufu_table.setColumnCount(4)
+        self.shoufu_table.setHorizontalHeaderLabels(["姓名", "能力", "任期", "去向"])
+        self.shoufu_table.verticalHeader().setVisible(False)
+        self.shoufu_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        tab6_layout.addWidget(self.shoufu_table, 2)
+        self.tab6.setLayout(tab6_layout)
+
         # Add tabs
         self.tabs.addTab(self.tab1, "主界面")
         self.tabs.addTab(self.tab2, "皇帝信息")
         self.tabs.addTab(self.tab3, "王朝信息")
         self.tabs.addTab(self.tab4, "皇室宗亲")
         self.tabs.addTab(self.tab5, "宗藩")
+        self.tabs.addTab(self.tab6, "朝廷")
         self.tabs.currentChanged.connect(self.on_main_tab_changed)
 
         layout.addWidget(self.tabs)
@@ -1059,8 +1124,8 @@ class DynastyApp(
         dialog.exec()
 
     def on_main_tab_changed(self, index):
-        """切到宗亲/宗藩时立即刷新，避免因节流看到过期数据。"""
-        if index in (3, 4) and self.ongame and self.people:
+        """切到宗亲/宗藩/朝廷时立即刷新，避免因节流看到过期数据。"""
+        if index in (3, 4, 5) and self.ongame and self.people:
             self.update_ui()
 
     def toggle_auto_run(self):

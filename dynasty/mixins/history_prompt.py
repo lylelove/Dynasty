@@ -13,6 +13,8 @@ class HistoryPromptMixin:
     _PROMPT_FIEFS_MAX = 10
     # 单个封国最多列出的历代国主数（超出则首尾节略）
     _PROMPT_FIEF_HOLDERS_MAX = 8
+    # 宰辅小节最多列出的历任首辅数（超出则中段节略）
+    _PROMPT_SHOUFU_MAX = 12
 
     def _describe_emperor_kinship(self, prev_emp, cur_emp):
         """描述当代皇帝与上一代皇帝的父系亲属关系，供国史行文交代世系承继。"""
@@ -383,6 +385,49 @@ class HistoryPromptMixin:
         if len(fiefs) > len(shown):
             lines.append(f"（其余 {len(fiefs) - len(shown)} 国从略。）")
 
+    def _build_court_section(self, lines):
+        """宰辅：历任首辅名录，供「宰辅列传」选用。"""
+        history = getattr(self, "shoufu_history", None) or []
+        if not history:
+            return
+
+        lines.append("")
+        lines.append("=" * 40)
+        lines.append(
+            "【五、宰辅（选用素材：可附「宰辅列传」，亦可在各帝本纪中带出）】"
+        )
+        shown = list(history)
+        if len(shown) > self._PROMPT_SHOUFU_MAX:
+            head = shown[: self._PROMPT_SHOUFU_MAX - 3]
+            dropped = len(shown) - self._PROMPT_SHOUFU_MAX
+            shown = head + [None] + shown[-3:]
+        else:
+            dropped = 0
+        for rec in shown:
+            if rec is None:
+                lines.append(f"（中间 {dropped} 任从略。）")
+                continue
+            if rec.get("end_year") is None:
+                years = max(0, self.year - rec.get("start_year", self.year))
+                if self.dynasty_die:
+                    lines.append(
+                        f"首辅{rec['name']}（材具：{self._ability_label(rec.get('ability'))}，"
+                        f"在任 {years} 年，国亡时犹在任）"
+                    )
+                else:
+                    lines.append(
+                        f"当朝首辅{rec['name']}（材具：{self._ability_label(rec.get('ability'))}，"
+                        f"在任 {years} 年——尚未盖棺，勿写其结局）"
+                    )
+            else:
+                years = max(0, rec["end_year"] - rec.get("start_year", rec["end_year"]))
+                exit_txt = rec.get("exit") or "去位"
+                exit_txt = "卒于任" if exit_txt == "卒" else exit_txt
+                lines.append(
+                    f"首辅{rec['name']}（材具：{self._ability_label(rec.get('ability'))}，"
+                    f"在任 {years} 年，{exit_txt}）"
+                )
+
     def _phase_summary(self):
         """根据历代终局国运粗描全朝阶段。"""
         if not self.listjson:
@@ -426,7 +471,8 @@ class HistoryPromptMixin:
             "在位长短、享年、子嗣（含嗣位者）、终局存亡。"
         )
         lines.append(
-            "2. 软演绎允许：性格、朝臣名、诏令细节、战场与宫廷情节——"
+            "2. 软演绎允许：性格、诏令细节、战场与宫廷情节——"
+            "朝臣以【五、宰辅】所列首辅为准，可另虚构中下层官吏；"
             "须与各帝「史评」及国运盛衰方向一致。"
         )
         lines.append(
@@ -547,6 +593,9 @@ class HistoryPromptMixin:
 
         # —— 四、宗藩（选用素材）——
         self._build_fief_section(lines)
+
+        # —— 五、宰辅（选用素材）——
+        self._build_court_section(lines)
 
         # —— 收束：输出要求 ——
         lines.append("")

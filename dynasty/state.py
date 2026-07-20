@@ -60,6 +60,12 @@ class GameStateMixin:
         self.reign_peak_dynasty_hp = 100
         self.reign_trough_dynasty_hp = 100
 
+        # 朝廷（内阁 + 六部）——重开时须在 gamemin_dynasty_new() 同步重置
+        self.ministers = []          # 所有朝臣（含已故/致仕），Minister 对象
+        self.next_minister_id = 1
+        self.court_posts = {}        # 官职名 -> minister id（None=虚位）
+        self.shoufu_history = []     # 历任首辅：[{name, ability, start_year, end_year, exit}]
+
         # Event System
         self.event_id = 0
         self.event_happened = [{"time": "", "event": ""}]
