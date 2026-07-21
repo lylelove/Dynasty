@@ -138,10 +138,12 @@ class DynastyLogicMixin:
         self.d_event = ""
         self.d_emperor = ""
         # 朝廷：与 init_game_state() 中的声明保持一致
+        from dynasty.mixins.court import POST_SHOUFU, empty_post_history
         self.ministers = []
         self.next_minister_id = 1
         self.court_posts = {}
-        self.shoufu_history = []
+        self.post_history = empty_post_history()
+        self.shoufu_history = self.post_history[POST_SHOUFU]
         self.used_minister_shihao = set()
         self.court_last_emperor_id = None
 

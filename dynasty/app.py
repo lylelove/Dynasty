@@ -239,6 +239,9 @@ class DynastyApp(
         self.gamemin_emperor()
         self.gamemin_dynasty()
         if not self.ongame:
+            # 亡国当年仍结算朝廷（卒/谥/致仕终老），避免终局花名册「超寿犹在」
+            if self.court_posts:
+                self.gamemin_court()
             self.update_ui()
             return
 
@@ -356,36 +359,229 @@ class DynastyApp(
             self.update_court_ui()
 
     def update_court_ui(self):
+        from dynasty.mixins.court import EXIT_LABELS, format_term_years
+
         self.court_table.setRowCount(0)
         for i, post in enumerate(ALL_POSTS):
             m = self.get_post_holder(post)
             self.court_table.insertRow(i)
-            self.court_table.setItem(i, 0, QTableWidgetItem(post_display(post)))
+            post_item = QTableWidgetItem(post_display(post))
+            post_item.setData(Qt.UserRole, post)
+            self.court_table.setItem(i, 0, post_item)
             if m is None:
                 self.court_table.setItem(i, 1, QTableWidgetItem("（虚位）"))
                 for col in (2, 3, 4, 5):
                     self.court_table.setItem(i, col, QTableWidgetItem("—"))
                 continue
-            self.court_table.setItem(i, 1, QTableWidgetItem(m.name))
+            name_item = QTableWidgetItem(m.name)
+            name_item.setData(Qt.UserRole, m.id)
+            name_item.setToolTip("点击姓名查看详情")
+            self.court_table.setItem(i, 1, name_item)
             self.court_table.setItem(i, 2, QTableWidgetItem(str(m.age)))
             self.court_table.setItem(i, 3, QTableWidgetItem(str(m.ability)))
-            self.court_table.setItem(i, 4, QTableWidgetItem(str(self.year - m.post_since_year)))
-            self.court_table.setItem(i, 5, QTableWidgetItem(str(self.year - m.entry_year)))
+            self.court_table.setItem(i, 4, QTableWidgetItem(str(max(0, self.year - m.post_since_year))))
+            self.court_table.setItem(i, 5, QTableWidgetItem(str(max(0, self.year - m.entry_year))))
 
         self.shoufu_table.setRowCount(0)
         for i, rec in enumerate(self.shoufu_history):
             self.shoufu_table.insertRow(i)
-            self.shoufu_table.setItem(i, 0, QTableWidgetItem(rec["name"]))
+            name_item = QTableWidgetItem(rec["name"])
+            name_item.setData(Qt.UserRole, rec.get("mid"))
+            name_item.setToolTip("点击姓名查看详情")
+            self.shoufu_table.setItem(i, 0, name_item)
             self.shoufu_table.setItem(i, 1, QTableWidgetItem(str(rec["ability"])))
-            end = rec["end_year"] if rec["end_year"] is not None else self.year
-            self.shoufu_table.setItem(i, 2, QTableWidgetItem(f"在任 {max(0, end - rec['start_year'])} 年"))
-            exit_txt = {"卒": "卒于任", "罢": "罢黜"}.get(rec["exit"], rec["exit"]) or "在任"
+            self.shoufu_table.setItem(
+                i, 2, QTableWidgetItem(format_term_years(rec["start_year"], rec["end_year"], self.year))
+            )
+            exit_txt = EXIT_LABELS.get(rec["exit"], rec["exit"]) or "在任"
             m = self.get_minister_by_id(rec.get("mid"))
-            if m is not None and m.shihao:
+            if m is not None and not m.is_alive and m.shihao:
                 exit_txt += f"，谥{m.shihao}"
             self.shoufu_table.setItem(i, 3, QTableWidgetItem(exit_txt))
         if self.shoufu_history:
             self.shoufu_table.scrollToBottom()
+
+    def on_court_table_clicked(self, row, column):
+        # 点姓名 → 官员详情；点职位等其它列 → 该职历任名录
+        if column == 1:
+            name_item = self.court_table.item(row, 1)
+            if name_item:
+                mid = name_item.data(Qt.UserRole)
+                if mid is not None:
+                    self.show_minister_detail_dialog(int(mid))
+                    return
+        post_item = self.court_table.item(row, 0)
+        if not post_item:
+            return
+        post = post_item.data(Qt.UserRole)
+        if not post:
+            return
+        self.show_post_history_dialog(post)
+
+    def on_shoufu_table_clicked(self, row, column):
+        name_item = self.shoufu_table.item(row, 0)
+        if not name_item:
+            return
+        mid = name_item.data(Qt.UserRole)
+        if mid is not None:
+            self.show_minister_detail_dialog(int(mid))
+
+    def show_minister_detail_dialog(self, mid):
+        """弹出朝臣个人详情：履历、材具、去向等。"""
+        from dynasty.mixins.court import EXIT_LABELS, format_term_years, post_display
+
+        m = self.get_minister_by_id(mid)
+        if m is None:
+            return
+
+        dialog = QDialog(self)
+        dialog.setWindowTitle(f"朝臣 · {m.name}")
+        dialog.resize(560, 520)
+        layout = QVBoxLayout()
+
+        section = QLabel("— 朝 臣 详 情 —")
+        section.setObjectName("section_label")
+        layout.addWidget(section)
+
+        form = QFormLayout()
+        form.addRow("姓名:", QLabel(m.name))
+        age_now = self.year - m.birth_year if m.is_alive else (
+            m.death_year - m.birth_year if m.death_year >= 0 else m.age
+        )
+        form.addRow("年龄:", QLabel(str(age_now)))
+        if m.death_year >= 0:
+            life = f"{m.birth_year}—{m.death_year}"
+        else:
+            life = f"{m.birth_year}—"
+        form.addRow("生卒:", QLabel(life))
+        if m.is_alive and not m.retired:
+            status = "在任"
+        elif m.is_alive and m.retired:
+            status = "去职闲居"
+        else:
+            status = "已故"
+        form.addRow("状态:", QLabel(status))
+        form.addRow("能力:", QLabel(str(m.ability)))
+        form.addRow("现任/末任:", QLabel(post_display(m.post) if m.post else "—"))
+        form.addRow("仕途年数:", QLabel(str(max(0, (m.death_year if m.death_year >= 0 else self.year) - m.entry_year))))
+        if m.quanchen:
+            form.addRow("权柄:", QLabel("曾威权震主"))
+        if m.shihao:
+            form.addRow("谥号:", QLabel(m.shihao))
+        layout.addLayout(form)
+
+        career_section = QLabel("— 仕 途 履 历 —")
+        career_section.setObjectName("section_label")
+        layout.addWidget(career_section)
+
+        career = self.get_minister_career(mid)
+        table = QTableWidget()
+        table.setEditTriggers(QAbstractItemView.NoEditTriggers)
+        table.setColumnCount(4)
+        table.setHorizontalHeaderLabels(["官职", "能力", "任期", "去向"])
+        table.verticalHeader().setVisible(False)
+        table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        table.setRowCount(0)
+        for i, rec in enumerate(career):
+            table.insertRow(i)
+            table.setItem(i, 0, QTableWidgetItem(post_display(rec.get("post", ""))))
+            table.setItem(i, 1, QTableWidgetItem(str(rec.get("ability", ""))))
+            table.setItem(
+                i, 2,
+                QTableWidgetItem(format_term_years(rec["start_year"], rec["end_year"], self.year)),
+            )
+            exit_txt = EXIT_LABELS.get(rec.get("exit") or "", rec.get("exit") or "") or "在任"
+            table.setItem(i, 3, QTableWidgetItem(exit_txt))
+        if career:
+            table.scrollToBottom()
+        layout.addWidget(table, 1)
+
+        close_btn = QPushButton("关闭")
+        close_btn.clicked.connect(dialog.accept)
+        layout.addWidget(close_btn, alignment=Qt.AlignRight)
+
+        dialog.setLayout(layout)
+        dialog.exec()
+
+    def show_post_history_dialog(self, post):
+        """弹出某官职的历任名录（姓名、能力、任期、去向、谥号）。"""
+        from dynasty.mixins.court import EXIT_LABELS, QUNFU_POSTS, format_term_years
+
+        history = self.get_post_history(post)
+        title_post = post_display(post)
+        if post in QUNFU_POSTS:
+            # 三席界面统称群辅，弹窗标明席次以免混淆
+            seat = {"群辅一": "一席", "群辅二": "二席", "群辅三": "三席"}.get(post, "")
+            title_post = f"群辅（{seat}）" if seat else "群辅"
+
+        dialog = QDialog(self)
+        dialog.setWindowTitle(f"历任 · {title_post}")
+        dialog.resize(640, 480)
+        layout = QVBoxLayout()
+
+        section = QLabel(f"— 历 任 {title_post} —")
+        section.setObjectName("section_label")
+        layout.addWidget(section)
+
+        holder = self.get_post_holder(post)
+        if holder is not None:
+            tenure = max(0, self.year - holder.post_since_year)
+            career = max(0, self.year - holder.entry_year)
+            hint = QLabel(
+                f"现任：{holder.name}　·　能力 {holder.ability}　·　"
+                f"本任 {tenure} 年　·　仕途 {career} 年　（点击姓名可看详情）"
+            )
+        else:
+            hint = QLabel("现任：（虚位）")
+        layout.addWidget(hint)
+
+        table = QTableWidget()
+        table.setEditTriggers(QAbstractItemView.NoEditTriggers)
+        table.setColumnCount(5)
+        table.setHorizontalHeaderLabels(["姓名", "能力", "任期", "去向", "谥号"])
+        table.verticalHeader().setVisible(False)
+        table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        table.setRowCount(0)
+        for i, rec in enumerate(history):
+            table.insertRow(i)
+            name_item = QTableWidgetItem(rec["name"])
+            name_item.setData(Qt.UserRole, rec.get("mid"))
+            name_item.setToolTip("点击姓名查看详情")
+            table.setItem(i, 0, name_item)
+            table.setItem(i, 1, QTableWidgetItem(str(rec["ability"])))
+            table.setItem(
+                i, 2,
+                QTableWidgetItem(format_term_years(rec["start_year"], rec["end_year"], self.year)),
+            )
+            exit_txt = EXIT_LABELS.get(rec["exit"], rec["exit"]) or "在任"
+            table.setItem(i, 3, QTableWidgetItem(exit_txt))
+            m = self.get_minister_by_id(rec.get("mid"))
+            shi = ""
+            if m is not None and not m.is_alive and m.shihao:
+                shi = m.shihao
+            table.setItem(i, 4, QTableWidgetItem(shi or "—"))
+        if history:
+            table.scrollToBottom()
+
+        def on_hist_clicked(row, column):
+            if column != 0:
+                return
+            item = table.item(row, 0)
+            if not item:
+                return
+            mid = item.data(Qt.UserRole)
+            if mid is not None:
+                self.show_minister_detail_dialog(int(mid))
+
+        table.cellClicked.connect(on_hist_clicked)
+        layout.addWidget(table, 1)
+
+        close_btn = QPushButton("关闭")
+        close_btn.clicked.connect(dialog.accept)
+        layout.addWidget(close_btn, alignment=Qt.AlignRight)
+
+        dialog.setLayout(layout)
+        dialog.exec()
 
     def update_family_tree(self):
         tree = self.family_tree_widget
@@ -1053,9 +1249,11 @@ class DynastyApp(
         self.court_table = QTableWidget()
         self.court_table.setEditTriggers(QAbstractItemView.NoEditTriggers)
         self.court_table.setColumnCount(6)
-        self.court_table.setHorizontalHeaderLabels(["职位", "姓名", "年龄", "能力", "任职年数", "入仕年数"])
+        self.court_table.setHorizontalHeaderLabels(["职位", "姓名", "年龄", "能力", "本任年数", "仕途年数"])
         self.court_table.verticalHeader().setVisible(False)
         self.court_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        self.court_table.setToolTip("点击姓名查看官员详情；点击职位等列查看该职历任名录")
+        self.court_table.cellClicked.connect(self.on_court_table_clicked)
         tab6_layout.addWidget(self.court_table, 3)
 
         shoufu_section = QLabel("— 历 任 首 辅 —")
@@ -1067,6 +1265,8 @@ class DynastyApp(
         self.shoufu_table.setHorizontalHeaderLabels(["姓名", "能力", "任期", "去向"])
         self.shoufu_table.verticalHeader().setVisible(False)
         self.shoufu_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        self.shoufu_table.setToolTip("点击姓名查看官员详情")
+        self.shoufu_table.cellClicked.connect(self.on_shoufu_table_clicked)
         tab6_layout.addWidget(self.shoufu_table, 2)
         self.tab6.setLayout(tab6_layout)
 

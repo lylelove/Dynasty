@@ -67,7 +67,11 @@ class GameStateMixin:
         self.ministers = []          # 所有朝臣（含已故/致仕），Minister 对象
         self.next_minister_id = 1
         self.court_posts = {}        # 官职名 -> minister id（None=虚位）
-        self.shoufu_history = []     # 历任首辅：[{mid, name, ability, start_year, end_year, exit}]
+        # 各职历任：{post: [{mid, name, ability, start_year, end_year, exit}]}
+        # shoufu_history 与 post_history["首辅"] 为同一列表引用
+        from dynasty.mixins.court import POST_SHOUFU, empty_post_history
+        self.post_history = empty_post_history()
+        self.shoufu_history = self.post_history[POST_SHOUFU]
         self.used_minister_shihao = set()  # 已授朝臣谥号（一朝不重谥）
         self.court_last_emperor_id = None  # 察觉换代用（新君或罢前朝首辅）
 

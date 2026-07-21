@@ -75,14 +75,14 @@ class Minister:
         self.name = name
         self.birth_year = birth_year
         self.death_year = -1
-        self.entry_year = entry_year        # 入仕（就任本朝官职）之年
+        self.entry_year = entry_year        # 初仕之年（进士/释褐，早于尚书/入阁）
         self.post = post                    # 现任官职（首辅/次辅/群辅/六部尚书）
-        self.post_since_year = entry_year   # 现职就任之年
+        self.post_since_year = entry_year   # 现职就任之年（可与初仕年不同）
         self.ability = roll_ability()
         self.death_age = roll_minister_death_age()
         self.age = 0
         self.is_alive = True
         self.retired = False                # 致仕（含罢归）
-        self.shihao = ""                    # 谥号（名臣身后追谥，如「文正」）
+        self.shihao = ""                    # 谥号（身后追谥，如「文正」；在世为空）
         self.quanchen = False               # 本任内已记过「权臣」纪事（防重复刷屏）
         # 扩展点（V2）：faction 朋党、exam_rank 科举出身

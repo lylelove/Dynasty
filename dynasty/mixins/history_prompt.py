@@ -429,7 +429,10 @@ class HistoryPromptMixin:
             else:
                 years = max(0, rec["end_year"] - rec.get("start_year", rec["end_year"]))
                 exit_txt = rec.get("exit") or "去位"
-                exit_txt = {"卒": "卒于任", "罢": "为新君所罢"}.get(exit_txt, exit_txt)
+                from dynasty.mixins.court import EXIT_LABELS
+                exit_txt = EXIT_LABELS.get(exit_txt, exit_txt)
+                if exit_txt == "罢黜":
+                    exit_txt = "为新君所罢"
                 lines.append(
                     f"首辅{rec['name']}（材具：{self._ability_label(rec.get('ability'))}，"
                     f"在任 {years} 年，{exit_txt}{extra_txt}）"
