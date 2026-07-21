@@ -17,6 +17,19 @@ RETIRE_AGE = 65
 RETIRE_FORCE_AGE = 75
 RETIRE_FORCE_AGE_SHOUFU = 78
 
+# 朝臣谥号（文臣以「文」字为首；文正为极品，历代不轻授）
+MINISTER_SHIHAO_TOP = ["文正", "文贞", "文成", "文忠"]
+MINISTER_SHIHAO_COMMON = [
+    "文端", "文定", "文简", "文懿", "文肃", "文毅", "文宪", "文庄",
+    "文敬", "文裕", "文节", "文靖", "文穆", "文昭", "文恪", "文恭",
+    "文襄", "文清", "文安", "文和",
+]
+
+# 权臣：主弱（帝能力≤3）而相强（首辅能力≥8）且秉政有年
+QUANCHEN_EMPEROR_AB_MAX = 3
+QUANCHEN_SHOUFU_AB_MIN = 8
+QUANCHEN_MIN_TENURE = 5
+
 
 def post_display(post):
     """界面/纪事用职名：群辅一/二/三统称「群辅」。"""
@@ -67,6 +80,9 @@ class CourtMixin:
             post,
         )
         m.age = age
+        # 终年须晚于就任之年（首辅可 45–55 岁入职，掷出的终年可能反而更小）
+        if m.death_age <= age + 1:
+            m.death_age = age + 2 + math.floor(random.random() * 8)
         self.next_minister_id += 1
         self.ministers.append(m)
         self.court_posts[post] = m.id
@@ -74,29 +90,45 @@ class CourtMixin:
 
     def init_court(self):
         """开国组建朝廷：11 职各授一人，首辅偏年长。"""
+        self.court_last_emperor_id = self.emperor_id
         for post in ALL_POSTS:
             if post == POST_SHOUFU:
                 self.recruit_minister(post, min_age=45, max_age=55)
             else:
                 self.recruit_minister(post, min_age=35, max_age=49)
         shoufu = self.get_shoufu()
-        self.shoufu_history.append({
-            "name": shoufu.name,
-            "ability": shoufu.ability,
-            "start_year": self.year,
-            "end_year": None,
-            "exit": "",
-        })
+        self.shoufu_history.append(self._new_shoufu_record(shoufu))
         self._append_court_event(f"拜{shoufu.name}为内阁首辅，总揽机务。")
 
     # —— 年度演化 ——
 
     def gamemin_court(self):
-        """每年：老与卒/致仕 → 自上而下递补 → 首辅级纪事。"""
+        """每年：新君察相 → 老与卒/致仕 → 自上而下递补 → 权臣察验。"""
         if not self.court_posts:
             return
+        self._court_new_emperor_check()
         self._court_aging_and_exit()
+        self._court_offstage_deaths()
         self._court_fill_vacancies()
+        self._court_quanchen_check()
+
+    def _court_new_emperor_check(self):
+        """新君临朝，或罢前朝首辅（权臣尤易见忌）；同年由递补链另拜新相。"""
+        if self.court_last_emperor_id is None:
+            self.court_last_emperor_id = self.emperor_id
+            return
+        if self.emperor_id == self.court_last_emperor_id:
+            return
+        self.court_last_emperor_id = self.emperor_id
+        shoufu = self.get_shoufu()
+        if shoufu is None:
+            return
+        chance = 0.5 if shoufu.quanchen else 0.15
+        if random.random() < chance:
+            shoufu.retired = True
+            self.court_posts[POST_SHOUFU] = None
+            self._close_shoufu_term(shoufu, "罢")
+            self._append_court_event(f"新君临朝，罢首辅{shoufu.name}政，放归田里。")
 
     def _court_aging_and_exit(self):
         for post in ALL_POSTS:
@@ -108,9 +140,11 @@ class CourtMixin:
                 m.is_alive = False
                 m.death_year = self.year
                 self.court_posts[post] = None
+                self._grant_minister_shihao(m)
                 if post == POST_SHOUFU:
                     self._close_shoufu_term(m, "卒")
-                    self._append_court_event(f"内阁首辅{m.name}卒于任上，帝辍朝三日。")
+                    shi = f"，追谥{m.shihao}" if m.shihao else ""
+                    self._append_court_event(f"内阁首辅{m.name}卒于任上，帝辍朝三日{shi}。")
                 continue
             if m.age >= RETIRE_AGE:
                 chance = 0.10 + 0.05 * (m.age - RETIRE_AGE)
@@ -125,6 +159,58 @@ class CourtMixin:
                         self._close_shoufu_term(m, "致仕")
                         self._append_court_event(f"首辅{m.name}乞骸骨，累疏获准，赐驰驿归里。")
 
+    def _court_offstage_deaths(self):
+        """致仕朝臣林下终老：继续计龄，至天年而卒（曾任首辅者记一笔）。"""
+        for m in self.ministers:
+            if not m.is_alive or not m.retired:
+                continue
+            m.age = self.year - m.birth_year
+            if m.age >= m.death_age:
+                m.is_alive = False
+                m.death_year = self.year
+                self._grant_minister_shihao(m)
+                if m.shihao and any(
+                    rec.get("mid") == m.id for rec in self.shoufu_history
+                ):
+                    self._append_court_event(f"致仕首辅{m.name}薨于里第，诏赠太傅，谥{m.shihao}。")
+
+    def _grant_minister_shihao(self, m):
+        """身后追谥：能力≥6 得谥，≥8 有机会得美谥之极（文正等）。"""
+        if m.ability < 6 or m.shihao:
+            return
+        if m.ability >= 8 and random.random() < 0.4:
+            pool = MINISTER_SHIHAO_TOP
+        else:
+            pool = MINISTER_SHIHAO_COMMON
+        used = self.used_minister_shihao
+        candidates = [s for s in pool if s not in used] or [
+            s for s in MINISTER_SHIHAO_COMMON if s not in used
+        ]
+        if not candidates:
+            return
+        m.shihao = random.choice(candidates)
+        used.add(m.shihao)
+
+    def _court_quanchen_check(self):
+        """权臣秉政：主上暗弱而首辅雄才、久居揆席，则威权震主（每任首辅至多记一次）。"""
+        shoufu = self.get_shoufu()
+        if shoufu is None or shoufu.quanchen:
+            return
+        tenure = self.year - shoufu.post_since_year
+        if (
+            self.emperor_ab <= QUANCHEN_EMPEROR_AB_MAX
+            and shoufu.ability >= QUANCHEN_SHOUFU_AB_MIN
+            and tenure >= QUANCHEN_MIN_TENURE
+            and random.random() < 0.25
+        ):
+            shoufu.quanchen = True
+            self._append_court_event(
+                f"首辅{shoufu.name}秉政日久，中外奏章皆决于私第，帝拱手而已。"
+            )
+            # 权柄下移：政务犹能运转（首辅之才补国运），然纲纪隳颓（略损）；
+            # 国祚生死只在 gamemin_dynasty() 结算，此处不直接压到 0 以下
+            self.dynasty_hp = max(1.0, self.dynasty_hp - 1.5)
+
     def _court_fill_vacancies(self):
         """递补链：次辅升首辅 → 群辅升次辅 → 尚书入阁 → 招新人补尚书。
 
@@ -137,13 +223,7 @@ class CourtMixin:
                 cifu = self.get_post_holder(POST_CIFU)
                 if cifu is not None:
                     self._move_minister(cifu, POST_CIFU, POST_SHOUFU)
-                    self.shoufu_history.append({
-                        "name": cifu.name,
-                        "ability": cifu.ability,
-                        "start_year": self.year,
-                        "end_year": None,
-                        "exit": "",
-                    })
+                    self.shoufu_history.append(self._new_shoufu_record(cifu))
                     self._append_court_event(f"拜{cifu.name}为内阁首辅，朝野属望。")
                     moved = True
 
@@ -177,13 +257,7 @@ class CourtMixin:
             if self.court_posts.get(post) is None:
                 m = self.recruit_minister(post, min_age=45, max_age=55)
                 if post == POST_SHOUFU:
-                    self.shoufu_history.append({
-                        "name": m.name,
-                        "ability": m.ability,
-                        "start_year": self.year,
-                        "end_year": None,
-                        "exit": "",
-                    })
+                    self.shoufu_history.append(self._new_shoufu_record(m))
                     self._append_court_event(f"擢{m.name}入阁为首辅，以补台阁之虚。")
 
     def _best_holder_of(self, posts):
@@ -201,9 +275,19 @@ class CourtMixin:
         m.post = to_post
         m.post_since_year = self.year
 
+    def _new_shoufu_record(self, m):
+        return {
+            "mid": m.id,
+            "name": m.name,
+            "ability": m.ability,
+            "start_year": self.year,
+            "end_year": None,
+            "exit": "",
+        }
+
     def _close_shoufu_term(self, m, exit_reason):
         for rec in reversed(self.shoufu_history):
-            if rec["name"] == m.name and rec["end_year"] is None:
+            if rec.get("mid") == m.id and rec["end_year"] is None:
                 rec["end_year"] = self.year
                 rec["exit"] = exit_reason
                 break

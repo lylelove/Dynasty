@@ -379,7 +379,11 @@ class DynastyApp(
             self.shoufu_table.setItem(i, 1, QTableWidgetItem(str(rec["ability"])))
             end = rec["end_year"] if rec["end_year"] is not None else self.year
             self.shoufu_table.setItem(i, 2, QTableWidgetItem(f"在任 {max(0, end - rec['start_year'])} 年"))
-            self.shoufu_table.setItem(i, 3, QTableWidgetItem(rec["exit"] or "在任"))
+            exit_txt = {"卒": "卒于任", "罢": "罢黜"}.get(rec["exit"], rec["exit"]) or "在任"
+            m = self.get_minister_by_id(rec.get("mid"))
+            if m is not None and m.shihao:
+                exit_txt += f"，谥{m.shihao}"
+            self.shoufu_table.setItem(i, 3, QTableWidgetItem(exit_txt))
         if self.shoufu_history:
             self.shoufu_table.scrollToBottom()
 

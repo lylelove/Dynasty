@@ -27,6 +27,9 @@ class GameStateMixin:
         self.emperor = ""
         self.yearNumber = ""
         self.emperor_zunhao = ""
+        # 尊号碎片（在位加号时累加）与上次上号之年（绝对纪年）
+        self.emperor_zunhao_frags = []
+        self.zunhao_last_add_year = 0
         # 开局快照（换代后 self.emperor 会变，国史提示词仍用开国信息）
         self.founder_name = ""
         self.founder_nianhao = ""
@@ -64,7 +67,9 @@ class GameStateMixin:
         self.ministers = []          # 所有朝臣（含已故/致仕），Minister 对象
         self.next_minister_id = 1
         self.court_posts = {}        # 官职名 -> minister id（None=虚位）
-        self.shoufu_history = []     # 历任首辅：[{name, ability, start_year, end_year, exit}]
+        self.shoufu_history = []     # 历任首辅：[{mid, name, ability, start_year, end_year, exit}]
+        self.used_minister_shihao = set()  # 已授朝臣谥号（一朝不重谥）
+        self.court_last_emperor_id = None  # 察觉换代用（新君或罢前朝首辅）
 
         # Event System
         self.event_id = 0
@@ -126,7 +131,6 @@ class GameStateMixin:
             {"time": "", "event": "宫城失火，延烧左藏库，典籍与帑银俱有损失。", "emperor_hp_change": -2, "dynasty_hp_change": -5},
             {"time": "", "event": "民间结社聚众抗税，郡守开仓安抚后事态稍平。", "emperor_hp_change": -1, "dynasty_hp_change": -4},
             {"time": "", "event": "名医献治疫方，太医院编成《时气要略》颁行诸道。", "emperor_hp_change": 1, "dynasty_hp_change": 4},
-            {"time": "", "event": "祥鸟集于端门，群臣请加尊号，帝以天戒自持而止。", "emperor_hp_change": 1, "dynasty_hp_change": 2},
             {"time": "", "event": "流寇余部转掠江淮，州县闭城自守，商旅断绝。", "emperor_hp_change": -1, "dynasty_hp_change": -6},
         ]
         self.data_emperor_hp_change = 0

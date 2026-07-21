@@ -38,7 +38,8 @@
 | `emperor_miaohao_prosperous` / `stable` / `decline` | 盛世/守成/末代庙号池（末代含殇宗等；分派时按享年过滤） |
 | `emperor_shifa_core_*` / `assist_*` | 谥号核心字与辅助字（好/中/恶；恶谥中殇/少/冲等按享年过滤） |
 | `empress_*` / `taizi_*` / `prince_*` / `princess_*` | 后妃、太子、亲王、公主谥号 |
-| `emperor_zunhao_pool` | 尊号两段碎片（圣神、文武…） |
+| `zunhao_theme_pools` | 尊号碎片按义类分池：天命（应天、法天…）/ 道蕴（至道、圣神…）/ 文治（崇文、昭明…）/ 武功（神武、威烈…）/ 德行（敦孝、钦明…） |
+| `zunhao_merit_themes` | 初号第二段与在位加号可用的功德义类（道蕴/文治/武功/德行；首段天命另池） |
 
 末尾调用 `reset_tang_pools()`。
 

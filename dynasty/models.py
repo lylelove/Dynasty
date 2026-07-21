@@ -82,5 +82,7 @@ class Minister:
         self.death_age = roll_minister_death_age()
         self.age = 0
         self.is_alive = True
-        self.retired = False                # 致仕
+        self.retired = False                # 致仕（含罢归）
+        self.shihao = ""                    # 谥号（名臣身后追谥，如「文正」）
+        self.quanchen = False               # 本任内已记过「权臣」纪事（防重复刷屏）
         # 扩展点（V2）：faction 朋党、exam_rank 科举出身

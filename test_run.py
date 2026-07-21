@@ -35,6 +35,21 @@ assert any("首辅" in e.get("event", "") for e in events), "chronicle should re
 assert all(m.name[0] != window.emperor_firstname for m in window.ministers), \
     "ministers should not share the imperial surname"
 
+# 朝臣寿数与致仕：终年必须晚于就任之年；致仕者也会终老（不能长生不死）
+assert all(m.death_age > (m.entry_year - m.birth_year) for m in window.ministers), \
+    "minister death_age should exceed entry age"
+retired_alive_over = [
+    m for m in window.ministers
+    if m.retired and m.is_alive and (window.year - m.birth_year) >= m.death_age
+]
+assert not retired_alive_over, "retired ministers past their death_age should be dead"
+
+# 首辅任期记录闭合：除最后在任者外，均应有 end_year
+open_terms = [rec for rec in window.shoufu_history if rec["end_year"] is None]
+assert len(open_terms) <= 1, "at most one shoufu term should be open"
+assert all(rec.get("mid") for rec in window.shoufu_history), \
+    "shoufu records should carry minister id"
+
 # 国史提示词含宰辅节
 prompt = window.build_history_prompt()
 assert "【五、宰辅（选用素材" in prompt, "history prompt should include 宰辅 section"
@@ -51,4 +66,7 @@ print(f"Passed: ran to year {window.year}, dynasty "
 window.gamemin_dynasty_new()
 assert window.ministers == [] and window.court_posts == {} and window.shoufu_history == [], \
     "restart should reset the court"
+assert window.used_minister_shihao == set() and window.court_last_emperor_id is None, \
+    "restart should reset court bookkeeping"
+assert window.d_time == "", "restart should clear the yearly event snapshot"
 sys.exit(0)

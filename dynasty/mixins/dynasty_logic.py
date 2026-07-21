@@ -118,6 +118,9 @@ class DynastyLogicMixin:
         self.used_person_names = set()
         self.used_nianhao = []
         self.used_zunhao = []
+        self.emperor_zunhao = ""
+        self.emperor_zunhao_frags = []
+        self.zunhao_last_add_year = 0
         self.shihao = ""
         self.miaohao = ""
         self.verdict = ""
@@ -128,11 +131,19 @@ class DynastyLogicMixin:
         self.reign_trough_dynasty_hp = 100
         self.founder_name = ""
         self.founder_nianhao = ""
+        # 上局残留的年度事件快照必须清空：gamestart() 在首次 event_happen() 之前
+        # 就会经 init_court()/record_dynasty_hp_history() 走 `self.d_time or ...`
+        # 分支，不清空则新朝开国纪事会带上前朝年号
+        self.d_time = ""
+        self.d_event = ""
+        self.d_emperor = ""
         # 朝廷：与 init_game_state() 中的声明保持一致
         self.ministers = []
         self.next_minister_id = 1
         self.court_posts = {}
         self.shoufu_history = []
+        self.used_minister_shihao = set()
+        self.court_last_emperor_id = None
 
     def dynasty_function_st(self):
         if self.dynasty_hp >= 90:

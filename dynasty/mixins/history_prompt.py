@@ -407,12 +407,19 @@ class HistoryPromptMixin:
             if rec is None:
                 lines.append(f"（中间 {dropped} 任从略。）")
                 continue
+            m = self.get_minister_by_id(rec.get("mid"))
+            extras = []
+            if m is not None and getattr(m, "quanchen", False):
+                extras.append("主少国疑之际威权震主")
+            if m is not None and getattr(m, "shihao", ""):
+                extras.append(f"谥{m.shihao}")
+            extra_txt = "，" + "，".join(extras) if extras else ""
             if rec.get("end_year") is None:
                 years = max(0, self.year - rec.get("start_year", self.year))
                 if self.dynasty_die:
                     lines.append(
                         f"首辅{rec['name']}（材具：{self._ability_label(rec.get('ability'))}，"
-                        f"在任 {years} 年，国亡时犹在任）"
+                        f"在任 {years} 年，国亡时犹在任{extra_txt}）"
                     )
                 else:
                     lines.append(
@@ -422,10 +429,10 @@ class HistoryPromptMixin:
             else:
                 years = max(0, rec["end_year"] - rec.get("start_year", rec["end_year"]))
                 exit_txt = rec.get("exit") or "去位"
-                exit_txt = "卒于任" if exit_txt == "卒" else exit_txt
+                exit_txt = {"卒": "卒于任", "罢": "为新君所罢"}.get(exit_txt, exit_txt)
                 lines.append(
                     f"首辅{rec['name']}（材具：{self._ability_label(rec.get('ability'))}，"
-                    f"在任 {years} 年，{exit_txt}）"
+                    f"在任 {years} 年，{exit_txt}{extra_txt}）"
                 )
 
     def _phase_summary(self):

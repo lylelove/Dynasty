@@ -69,8 +69,10 @@ main.py
 | 6 | `gamemin_family_marriage_birth` | family | 婚配与生育 |
 | 7 | `update_crown_prince` | succession | 嫡长/代位 → 太子与世子 |
 | 8 | `gamemin_family_shihao_titles` | titles | 成年授爵、谥号、封爵继承/过继 |
-| 9 | `dynasty_function_st` | dynasty_logic | 天下大势文案 |
-| 10 | `update_ui` | app | 刷新全部界面 |
+| 9 | `gamemin_court` | court | 朝廷演化：致仕/卒、递补拜相、权臣 |
+| 10 | `prune_unimportant_people` | family | 清理不重要人物 |
+| 11 | `dynasty_function_st` | dynasty_logic | 天下大势文案 |
+| 12 | `update_ui` | app | 刷新全部界面 |
 
 主界面仅「自动运行」推进年份（无「继续」按钮）；换代无弹窗。
 
@@ -91,6 +93,7 @@ main.py
 | [11-dynasty-logic.md](./11-dynasty-logic.md) | `mixins/dynasty_logic.py` | 国祚与开局/重开 |
 | [12-app.md](./12-app.md) | `dynasty/app.py` | 主窗口与 UI |
 | [13-history-prompt.md](./13-history-prompt.md) | `mixins/history_prompt.py` | AI 国史提示词生成 |
+| [14-court.md](./14-court.md) | `mixins/court.py` | 朝廷（内阁+六部）自动演化 |
 
 ## 入口与兼容
 
@@ -108,5 +111,6 @@ main.py
 | 姓名字库 / 字辈诗 | `resources.py` → `init_tang_resources` |
 | 爵位等级与封号名 | `resources.py` 明制八等 + `mixins/titles.py` 命名 |
 | 庙号谥号规则 | `mixins/emperor.py` → `gamemin_shihao` |
+| 朝廷官职 / 权臣 / 朝臣谥号 | `mixins/court.py` 顶部常量与 `gamemin_court` |
 | 界面布局 / 新 Tab | `app.py` → `setup_main_game_screen` |
 | 主题颜色 | `styles.py` → `apply_stylesheet` |

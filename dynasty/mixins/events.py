@@ -68,6 +68,16 @@ class EventsMixin:
 
         self.record_current_year_for_nianhao()
 
+        # 上尊号礼：治世或大功之年，群臣或请加尊号（受则号增一段，辞则称颂）
+        zunhao_text = self.try_offer_zunhao()
+        if zunhao_text:
+            self.event_happened.append({
+                "time": self.d_time,
+                "emperor": self.emperor_zunhao or self.emperor or "",
+                "emperor_id": self.emperor_id,
+                "event": zunhao_text,
+            })
+
     def event_id_chose(self):
         self.event_id = random.randrange(len(self.event_list))
 
